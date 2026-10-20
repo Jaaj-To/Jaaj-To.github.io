@@ -1,5 +1,3 @@
-/* Layout admin : barre du haut, puis 3 colonnes qui défilent séparément
-   (liste des projets | formulaire | aperçu du site). Réutilise les tokens de style.css. */
 :root {
   --danger: #ef8a7a;
   --ok: #a6d9c7;
@@ -13,7 +11,6 @@ body.admin code { font-family: var(--font-mono); font-size: .85em; background: v
 .muted { color: var(--muted); }
 .small { font-size: .82rem; }
 
-/* ---------- Champs ---------- */
 .field { display: grid; gap: 6px; min-width: 0; }
 .field > span { font: 600 .72rem/1.2 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .admin input:not([type="checkbox"]):not([type="color"]):not([type="file"]),
@@ -32,7 +29,6 @@ body.admin code { font-family: var(--font-mono); font-size: .85em; background: v
 }
 .admin input::placeholder, .admin textarea::placeholder { color: color-mix(in srgb, var(--muted) 65%, transparent); }
 .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.field-grid.three { grid-template-columns: 1.1fr 1.3fr .8fr; }
 .span-2 { grid-column: span 2; }
 .check { display: flex; align-items: baseline; gap: 9px; cursor: pointer; flex-wrap: wrap; }
 .check input { accent-color: var(--accent); width: 16px; height: 16px; transform: translateY(2px); }
@@ -63,7 +59,6 @@ body.admin code { font-family: var(--font-mono); font-size: .85em; background: v
 .file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; font-size: 0; }
 .file-btn:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* ---------- Connexion ---------- */
 .login {
   min-height: 100%; overflow-y: auto;
   display: grid; place-items: center;
@@ -87,14 +82,7 @@ body.admin code { font-family: var(--font-mono); font-size: .85em; background: v
 .back-link { justify-self: start; font: 500 .82rem/1 var(--font-mono); color: var(--muted); text-decoration: none; }
 .back-link:hover { color: var(--fg); }
 .form-error { padding: .8em 1em; border-radius: 9px; border: 1px solid color-mix(in srgb, var(--danger) 50%, transparent); background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); font-size: .88rem; }
-.login .link-btn { justify-self: center; color: var(--muted); font-size: .88rem; }
-.login .link-btn:hover { color: var(--fg); }
-.help { border-top: 1px solid var(--line); padding-top: 14px; font-size: .88rem; }
-.help summary { cursor: pointer; color: var(--accent); font-weight: 500; }
-.help ol { padding-left: 1.2em; margin: 12px 0; display: grid; gap: 8px; color: var(--fg); }
-.help p { font-size: .82rem; }
 
-/* ---------- Structure de l'app ---------- */
 .app { height: 100%; display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
 .app[hidden] { display: none; }
 .topbar {
@@ -138,7 +126,6 @@ body.admin code { font-family: var(--font-mono); font-size: .85em; background: v
 @media (max-width: 1400px) { .workspace.preview-open { --sidebar-w: 230px; grid-template-columns: var(--sidebar-w) minmax(0, 1fr) minmax(340px, 36%); } }
 .sidebar, .editor, .preview-pane { min-height: 0; overflow-y: auto; }
 
-/* ---------- Liste des projets ---------- */
 .sidebar { border-right: 1px solid var(--line); background: var(--bg); padding: 14px 10px 24px; }
 .sidebar-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 6px 12px; }
 .project-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
@@ -168,7 +155,6 @@ body.admin code { font-family: var(--font-mono); font-size: .85em; background: v
 .pl-order .icon-btn { width: 24px; height: 20px; font-size: .75rem; }
 .pl-item:hover .pl-order, .pl-item:focus-within .pl-order, .pl-item.selected .pl-order { opacity: 1; }
 
-/* ---------- Éditeur ---------- */
 .editor { container-type: inline-size; padding: 24px clamp(16px, 3vw, 36px) 80px; }
 .editor-empty { display: grid; justify-items: start; gap: 12px; padding-top: 40px; }
 .ed-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
@@ -207,7 +193,6 @@ body.admin code { font-family: var(--font-mono); font-size: .85em; background: v
 .panel h2 { font-size: 1.1rem; }
 .toggles { display: grid; gap: 10px; padding-top: 4px; }
 
-/* Technos */
 .chips-input {
   display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
   padding: 6px; border: 1px solid var(--line); border-radius: 9px; background: var(--field-bg);
@@ -223,7 +208,6 @@ body.admin code { font-family: var(--font-mono); font-size: .85em; background: v
 .chip-tag button:hover { color: var(--danger); }
 .admin .chips-input input#tech-input { flex: 1; min-width: 120px; width: auto; border: 0; background: none; box-shadow: none; padding: .35em .4em; }
 
-/* Médias */
 .media-field { display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: 16px; align-items: start; }
 .mf-thumb, .gal-thumb {
   position: relative; aspect-ratio: 16 / 9; max-width: 100%;
@@ -257,11 +241,9 @@ body.admin code { font-family: var(--font-mono); font-size: .85em; background: v
 .url-add { display: flex; gap: 8px; }
 .url-add input { flex: 1; }
 
-/* Liens */
 .link-row { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.6fr) auto; gap: 8px; align-items: center; }
 #panel-links > .btn { justify-self: start; }
 
-/* ---------- Aperçu ---------- */
 .preview-pane { display: none; border-left: 1px solid var(--line); background: var(--bg); overflow: hidden; }
 .preview-open .preview-pane { display: grid; grid-template-rows: auto minmax(0, 1fr); }
 .preview-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
@@ -276,7 +258,6 @@ body.admin code { font-family: var(--font-mono); font-size: .85em; background: v
 .preview-frame-wrap iframe { width: 100%; height: 100%; border: 0; background: var(--bg); }
 .preview-toggle[aria-pressed="true"] { border-color: var(--line); background: var(--surface-2); }
 
-/* ---------- Toast ---------- */
 .toast {
   position: fixed; z-index: 100;
   left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
@@ -290,7 +271,6 @@ body.admin code { font-family: var(--font-mono); font-size: .85em; background: v
 .toast.ok { background: var(--ok); color: #10201a; }
 @keyframes toast-in { from { transform: translate(-50%, 10px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
 
-/* ---------- Responsive ---------- */
 @media (max-width: 1100px) {
   .workspace.preview-open { grid-template-columns: var(--sidebar-w) minmax(0, 1fr); }
   .preview-open .preview-pane {
@@ -310,7 +290,7 @@ body.admin code { font-family: var(--font-mono); font-size: .85em; background: v
   .pl-item { flex: none; width: 220px; }
   .pl-order { opacity: 1; }
   .editor { overflow: visible; }
-  .field-grid, .field-grid.three { grid-template-columns: minmax(0, 1fr); }
+  .field-grid { grid-template-columns: minmax(0, 1fr); }
   .span-2 { grid-column: auto; }
   .media-field { grid-template-columns: minmax(0, 1fr); }
   .mf-thumb { width: 200px; }

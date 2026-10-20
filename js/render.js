@@ -1,5 +1,3 @@
-/* Fonctions d'affichage des projets, partagées par le site (main.js)
-   et la page d'administration (admin.js). */
 window.PFRender = (function () {
   "use strict";
 
@@ -11,12 +9,10 @@ window.PFRender = (function () {
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const slugify = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
-  // Chemins remplacés par des aperçus locaux (fichiers pas encore publiés).
   let srcMap = {};
   const src = (s) => srcMap[s] || s;
   const setSrcMap = (m) => { srcMap = m || {}; };
 
-  /* ---------- Données ---------- */
   function normalizeLinks(links) {
     if (!links) return [];
     if (Array.isArray(links)) return links.filter((l) => l && l.url);
@@ -34,7 +30,6 @@ window.PFRender = (function () {
   }
   const normalizeAll = (list) => (list || []).filter((g) => g && g.title && !g.hidden).map(normalizeGame);
 
-  /* ---------- Médias ---------- */
   const ytId = (url) => (String(url).match(/(?:youtu\.be\/|[?&]v=|embed\/|shorts\/)([\w-]{11})/) || [])[1];
   function mediaType(url) {
     if (ytId(url)) return "yt";
@@ -55,7 +50,7 @@ window.PFRender = (function () {
   function placeholder(g) {
     return `<div class="ph" style="--ph:${esc(g.color || "#4a4540")}"><span>${esc(g.title)}</span></div>`;
   }
-  // Image introuvable : on affiche la vignette générée à la place.
+
   function fail(img) {
     img.outerHTML = placeholder({ title: img.dataset.title, color: img.dataset.color });
   }
@@ -71,7 +66,7 @@ window.PFRender = (function () {
     if (t === "img") return `<img class="hover-prev" src="${esc(src(g.hoverPreview))}" alt="" aria-hidden="true">`;
     return "";
   }
-  // Lance l'aperçu vidéo au survol des cartes.
+
   function bindHover(root) {
     root.querySelectorAll("[data-open]").forEach((el) => {
       const v = el.querySelector("video.hover-prev");
@@ -81,7 +76,6 @@ window.PFRender = (function () {
     });
   }
 
-  /* ---------- Cartes ---------- */
   function badgesHTML(g) {
     const b = [];
     if (g.featured) b.push(`<span class="badge badge-star">★ À la une</span>`);
@@ -124,7 +118,6 @@ window.PFRender = (function () {
       </a>`;
   }
 
-  /* ---------- Fiche projet ---------- */
   function stageHTML(g, m) {
     if (!m) return placeholder(g);
     if (m.type === "yt") return `<iframe src="https://www.youtube-nocookie.com/embed/${m.id}" title="${esc(g.title)} — vidéo" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;

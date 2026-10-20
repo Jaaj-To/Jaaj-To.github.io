@@ -13,42 +13,23 @@
 </head>
 <body class="admin">
 
-  <!-- ===== Connexion ===== -->
   <section class="login" id="login" hidden>
     <form class="login-card" id="login-form" autocomplete="on">
       <a class="back-link" href="index.html">← Retour au site</a>
       <div class="login-head">
         <p class="eyebrow">// Admin</p>
         <h1>Connexion</h1>
-        <p class="muted">Connecte-toi avec un token GitHub pour modifier tes projets et les publier directement sur ton site.</p>
       </div>
 
-      <div class="field-grid three">
-        <label class="field"><span>Compte GitHub</span><input id="gh-owner" name="owner" required autocomplete="username" spellcheck="false"></label>
-        <label class="field"><span>Dépôt</span><input id="gh-repo" name="repo" required spellcheck="false"></label>
-        <label class="field"><span>Branche</span><input id="gh-branch" name="branch" required spellcheck="false"></label>
-      </div>
-      <label class="field"><span>Token GitHub</span><input id="gh-token" name="token" type="password" required autocomplete="current-password" spellcheck="false" placeholder="github_pat_…"></label>
+      <input type="text" name="username" id="gh-user" autocomplete="username" hidden>
+      <label class="field"><span>Token GitHub</span><input id="gh-token" name="token" type="password" required autocomplete="current-password" spellcheck="false"></label>
       <label class="check"><input type="checkbox" id="remember"> Rester connecté sur cet appareil</label>
 
       <p class="form-error" id="login-error" role="alert" hidden></p>
       <button class="btn btn-accent btn-block" type="submit" id="login-btn">Se connecter</button>
-      <button class="link-btn" type="button" id="local-btn">Continuer en mode local, sans publier</button>
-
-      <details class="help">
-        <summary>Comment créer mon token ?</summary>
-        <ol>
-          <li>Sur GitHub : <strong>Settings → Developer settings → Personal access tokens → Fine-grained tokens</strong>, puis <strong>Generate new token</strong>.</li>
-          <li><strong>Repository access</strong> : « Only select repositories » et choisis le dépôt de ton site.</li>
-          <li><strong>Permissions → Repository permissions → Contents</strong> : « Read and write ».</li>
-          <li>Génère le token, copie-le et colle-le ici. GitHub ne le réaffiche plus ensuite.</li>
-        </ol>
-        <p class="muted">Le token reste dans ton navigateur et n'est envoyé qu'à api.github.com. Sans lui, personne ne peut modifier ton site, même en ouvrant cette page.</p>
-      </details>
     </form>
   </section>
 
-  <!-- ===== Éditeur ===== -->
   <section class="app" id="app" hidden>
     <header class="topbar">
       <div class="topbar-left">

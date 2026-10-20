@@ -1,11 +1,10 @@
-/* Page d'administration : connexion GitHub, édition des projets,
-   envoi des médias et publication de data/games.js. */
 (function () {
   "use strict";
 
   const R = window.PFRender;
   const { esc, slugify } = R;
   const P = window.PROFILE || {};
+  const CFG = { owner: "", repo: "", branch: "main", ...(P.admin || {}) };
   const CATS = P.categories || [];
   const catLabel = (id) => (CATS.find((c) => c.id === id) || {}).label || id || "";
 
@@ -21,13 +20,13 @@
   const COLORS = ["#c28a2c", "#2f7a8c", "#3d4f6b", "#b4495a", "#5d7a5a", "#7b4bb3", "#a8553a", "#2d6a4f"];
 
   const S = {
-    mode: null,            // "github" | "local"
-    auth: null,            // { owner, repo, branch, token }
-    games: [],             // projets en cours d'édition (avec _uid)
+    mode: null,
+    auth: null,
+    games: [],
     selected: null,
-    published: "[]",       // version publiée, pour savoir s'il y a des modifs
-    pending: {},           // chemin -> File pas encore envoyé
-    blobUrls: {},          // chemin -> URL locale pour l'aperçu
+    published: "[]",
+    pending: {},
+    blobUrls: {},
     filesVersion: 0,
     sentFilesVersion: -1,
     frameReady: false,
@@ -37,9 +36,6 @@
     busy: false
   };
 
-  /* ===================================================================
-     Utilitaires
-     =================================================================== */
   const uid = () => Math.random().toString(36).slice(2, 10);
   const current = () => S.games.find((g) => g._uid === S.selected) || null;
   const gameId = (g) => g.id || slugify(g.title || "Sans titre");
@@ -76,12 +72,9 @@
     try { return JSON.parse(localStorage.getItem(key) || sessionStorage.getItem(key) || "null"); } catch (e) { return null; }
   }
   function storageRemove(key) {
-    try { localStorage.removeItem(key); sessionStorage.removeItem(key); } catch (e) { /* ignore */ }
+    try { localStorage.removeItem(key); sessionStorage.removeItem(key); } catch (e) { }
   }
 
-  /* ===================================================================
-     Données : format édition <-> format fichier
-     =================================================================== */
   function toEditable(g) {
     const e = { ...g };
     e.links = R.normalizeLinks(g.links).map((l) => ({ label: l.label, url: l.url }));
@@ -122,14 +115,7 @@
     return Object.keys(S.pending).filter((p) => used.has(p));
   }
 
-  const FILE_HEADER = `/* =====================================================================
-   TES JEUX — fichier mis à jour par la page Admin (admin.html).
-   Tu peux aussi le modifier à la main : voir README.md pour la liste
-   des champs. L'ordre de la liste = l'ordre d'affichage sur le site.
-   ===================================================================== */
-
-`;
-  const gamesFileContent = () => `${FILE_HEADER}window.GAMES = ${JSON.stringify(savedList(), null, 2)};\n`;
+  const gamesFileContent = () => `window.GAMES = ${JSON.stringify(savedList(), null, 2)};\n`;
 
   function parseGamesFile(code) {
     const w = {};
@@ -138,23 +124,20 @@
     return w.GAMES;
   }
 
-  /* ----- Brouillon local (survit à un rechargement) ----- */
   const saveDraft = debounce(() => {
     try {
       if (isDirty()) localStorage.setItem(DRAFT_KEY, JSON.stringify({ games: savedList(), savedAt: Date.now() }));
       else localStorage.removeItem(DRAFT_KEY);
-    } catch (e) { /* stockage indisponible */ }
+    } catch (e) { }
   }, 400);
   const clearDraft = () => storageRemove(DRAFT_KEY);
 
-  /* ===================================================================
-     API GitHub
-     =================================================================== */
   const encPath = (p) => p.split("/").map(encodeURIComponent).join("/");
 
   async function gh(path, opts = {}) {
     const a = S.auth;
-    const res = await fetch(`https://api.github.com/repos/${encodeURIComponent(a.owner)}/${encodeURIComponent(a.repo)}${path}`, {
+    const base = opts.root ? "https://api.github.com" : `https://api.github.com/repos/${encodeURIComponent(CFG.owner)}/${encodeURIComponent(CFG.repo)}`;
+    const res = await fetch(`${base}${path}`, {
       method: opts.method || "GET",
       cache: "no-store",
       headers: {
@@ -168,17 +151,17 @@
     if (res.status === 404 && opts.allow404) return null;
     if (!res.ok) {
       let msg = "";
-      try { msg = (await res.json()).message || ""; } catch (e) { /* ignore */ }
+      try { msg = (await res.json()).message || ""; } catch (e) { }
       const err = new Error(msg || res.statusText);
       err.status = res.status;
       throw err;
     }
     return res.json();
   }
-  const getFile = (p) => gh(`/contents/${encPath(p)}?ref=${encodeURIComponent(S.auth.branch)}`, { allow404: true });
+  const getFile = (p) => gh(`/contents/${encPath(p)}?ref=${encodeURIComponent(CFG.branch)}`, { allow404: true });
   const putFile = (p, content, message, sha) => gh(`/contents/${encPath(p)}`, {
     method: "PUT",
-    body: { message, content, branch: S.auth.branch, ...(sha ? { sha } : {}) }
+    body: { message, content, branch: CFG.branch, ...(sha ? { sha } : {}) }
   });
 
   function ghMessage(err) {
@@ -193,9 +176,6 @@
     }
   }
 
-  /* ===================================================================
-     Interface générale
-     =================================================================== */
   function toast(msg, kind = "") {
     const t = $("#toast");
     t.textContent = msg;
@@ -217,15 +197,12 @@
     $("#app").hidden = true;
     $("#login").hidden = false;
     document.title = "Connexion | Admin du portfolio";
-    const a = { ...(P.admin || {}), ...(S.auth || {}) };
-    $("#gh-owner").value = a.owner || "";
-    $("#gh-repo").value = a.repo || "";
-    $("#gh-branch").value = a.branch || "main";
+    $("#gh-user").value = CFG.owner;
     $("#gh-token").value = "";
     const e = $("#login-error");
     e.textContent = error || "";
     e.hidden = !error;
-    (a.owner ? $("#gh-token") : $("#gh-owner")).focus();
+    $("#gh-token").focus();
   }
 
   function showApp() {
@@ -233,16 +210,8 @@
     $("#app").hidden = false;
     document.title = "Admin du portfolio";
     const pill = $("#mode-pill");
-    if (S.mode === "github") {
-      pill.textContent = `GitHub · ${S.auth.owner}/${S.auth.repo}`;
-      pill.className = "mode-pill online";
-    } else {
-      pill.textContent = "Mode local";
-      pill.className = "mode-pill";
-    }
-    $("#publish-btn").hidden = S.mode !== "github";
-    $("#export-btn").classList.toggle("btn-accent", S.mode === "local");
-    $("#logout-btn").textContent = S.mode === "github" ? "Déconnexion" : "Quitter";
+    pill.textContent = `${S.auth.login} · ${CFG.owner}/${CFG.repo}`;
+    pill.className = "mode-pill online";
     applyPreviewOpen();
   }
 
@@ -254,52 +223,53 @@
     if (dirty || files) {
       const parts = [];
       if (dirty) parts.push("modifications non publiées");
-      if (files) parts.push(`${files} média${files > 1 ? "s" : ""} ${S.mode === "github" ? "à envoyer" : "à copier dans assets"}`);
+      if (files) parts.push(`${files} média${files > 1 ? "s" : ""} à envoyer`);
       el.textContent = parts.join(" · ").replace(/^./, (c) => c.toUpperCase());
       el.className = "save-state dirty";
     } else {
-      el.textContent = S.mode === "github" ? "Tout est publié" : "Aucune modification";
+      el.textContent = "Tout est publié";
       el.className = "save-state";
     }
     $("#publish-btn").disabled = S.busy;
   }
 
-  /* ===================================================================
-     Connexion
-     =================================================================== */
+  async function authenticate(token) {
+    if (!CFG.owner || !CFG.repo) throw new Error("Accès refusé.");
+    S.auth = { token, login: "" };
+    let user;
+    try {
+      user = await gh("/user", { root: true });
+    } catch (err) {
+      if (err.status === 401 || err.status === 403) throw new Error("Accès refusé.");
+      throw err;
+    }
+    if (!user || String(user.login).toLowerCase() !== CFG.owner.toLowerCase()) throw new Error("Accès refusé.");
+    const repo = await gh("");
+    if (!repo.permissions || repo.permissions.push !== true) throw new Error("Accès refusé.");
+    S.auth.login = user.login;
+  }
+
   async function onLogin(e) {
     e.preventDefault();
-    const auth = {
-      owner: $("#gh-owner").value.trim(),
-      repo: $("#gh-repo").value.trim(),
-      branch: $("#gh-branch").value.trim() || "main",
-      token: $("#gh-token").value.trim()
-    };
+    const token = $("#gh-token").value.trim();
     const btn = $("#login-btn");
     btn.disabled = true;
     btn.textContent = "Connexion…";
     $("#login-error").hidden = true;
-    S.auth = auth;
     try {
-      const repo = await gh("");
-      if (repo.permissions && repo.permissions.push === false) {
-        throw Object.assign(new Error("Ton compte n'a pas le droit d'écrire dans ce dépôt."), { status: 0 });
-      }
-      try { await gh(`/branches/${encodeURIComponent(auth.branch)}`); } catch (err) {
-        if (err.status === 404) throw Object.assign(new Error(`La branche « ${auth.branch} » n'existe pas dans ce dépôt.`), { status: 0 });
-        throw err;
-      }
+      await authenticate(token);
       try {
         const store = $("#remember").checked ? localStorage : sessionStorage;
         storageRemove(AUTH_KEY);
-        store.setItem(AUTH_KEY, JSON.stringify(auth));
-      } catch (err) { /* stockage indisponible : la session dure jusqu'au rechargement */ }
+        store.setItem(AUTH_KEY, JSON.stringify({ token }));
+      } catch (err) { }
       await startGithub();
     } catch (err) {
-      S.auth = { ...auth, token: "" };
+      S.auth = null;
       const box = $("#login-error");
-      box.textContent = err.status ? ghMessage(err) : (err instanceof TypeError ? ghMessage(err) : err.message);
+      box.textContent = err.status || err instanceof TypeError ? ghMessage(err) : err.message;
       box.hidden = false;
+      $("#gh-token").value = "";
     } finally {
       btn.disabled = false;
       btn.textContent = "Se connecter";
@@ -317,22 +287,16 @@
       setBanner("");
       if (!f) setBanner("Le dépôt ne contient pas encore <code>data/games.js</code>. Il sera créé à la première publication.", "info");
     } catch (err) {
-      if (err.status === 401 || err.status === 404) {
+      if (err.status === 401 || err.status === 403 || err.status === 404) {
         storageRemove(AUTH_KEY);
-        S.auth = { ...S.auth, token: "" };
-        showLogin(ghMessage(err));
+        S.auth = null;
+        S.mode = null;
+        showLogin("Accès refusé.");
         return;
       }
       setBanner(`Impossible de lire <code>data/games.js</code> sur GitHub (${esc(err.status ? ghMessage(err) : err.message)}). Les projets affichés viennent de la version en ligne du site.`, "error");
     }
     loadGames(source);
-  }
-
-  function startLocal() {
-    S.mode = "local";
-    showApp();
-    setBanner("Mode local : tes modifications restent dans ce navigateur. Clique sur <strong>Exporter games.js</strong> puis remplace <code>data/games.js</code> par le fichier téléchargé.", "info");
-    loadGames(window.GAMES || []);
   }
 
   function loadGames(source) {
@@ -349,17 +313,14 @@
   }
 
   function logout() {
-    if (S.mode === "github") storageRemove(AUTH_KEY);
+    storageRemove(AUTH_KEY);
     if (isDirty()) toast("Tes modifications non publiées sont gardées en brouillon dans ce navigateur.");
     S.mode = null;
-    S.auth = S.auth ? { ...S.auth, token: "" } : null;
+    S.auth = null;
     setBanner("");
     showLogin();
   }
 
-  /* ===================================================================
-     Liste des projets
-     =================================================================== */
   function smallThumb(g) {
     if (g.cover && R.mediaType(g.cover) === "img") {
       return `<img src="${esc(R.src(g.cover))}" alt="" onerror="this.remove()"><span class="pl-initial" style="--ph:${esc(g.color || "#4a4540")}">${esc((g.title || "?").charAt(0))}</span>`;
@@ -391,9 +352,6 @@
     $("#tech-list").innerHTML = [...techs].sort().map((t) => `<option value="${esc(t)}"></option>`).join("");
   }
 
-  /* ===================================================================
-     Éditeur
-     =================================================================== */
   function field(label, f, value, attrs = "", cls = "") {
     return `<label class="field ${cls}"><span>${label}</span><input data-f="${f}" value="${esc(value ?? "")}" ${attrs}></label>`;
   }
@@ -407,10 +365,7 @@
   }
 
   function pendingHint(path) {
-    if (!S.pending[path]) return "";
-    if (S.mode === "github") return `<span class="pending">Nouveau fichier, envoyé sur GitHub à la publication.</span>`;
-    const dir = path.slice(0, path.lastIndexOf("/") + 1);
-    return `<span class="pending">Copie ce fichier dans <code>${esc(dir)}</code> sous le nom <code>${esc(path.slice(dir.length))}</code>.</span>`;
+    return S.pending[path] ? `<span class="pending">Nouveau fichier, envoyé à la publication.</span>` : "";
   }
 
   function mediaField(f, label, hint, accept) {
@@ -497,7 +452,7 @@
             <li class="gal-item">
               <div class="gal-thumb">${mediaThumb(p, g)}</div>
               <div class="gal-body">
-                <span class="gal-type">${TYPE_LABEL[type]}${S.pending[p] ? ` · <span class="pending">${S.mode === "github" ? "à envoyer" : "à copier dans assets"}</span>` : ""}</span>
+                <span class="gal-type">${TYPE_LABEL[type]}${S.pending[p] ? ` · <span class="pending">à envoyer</span>` : ""}</span>
                 <input data-gal="${i}" value="${esc(p)}" spellcheck="false" aria-label="Chemin ou lien du média ${i + 1}">
               </div>
               <div class="gal-actions">
@@ -609,7 +564,6 @@
     sendPreview(true);
   }
 
-  /* Appelé après chaque modification d'un champ. */
   function changed() {
     const g = current();
     if (g) {
@@ -623,9 +577,6 @@
     schedulePreview();
   }
 
-  /* ===================================================================
-     Médias
-     =================================================================== */
   function addFiles(files, target) {
     const g = current();
     if (!g) return;
@@ -650,7 +601,7 @@
     S.filesVersion++;
     if (target === "gallery") added.forEach((p) => { if (!g.gallery.includes(p)) g.gallery.push(p); });
     else g[target] = added[0];
-    // Un même fichier peut servir à la fois de couverture et dans la galerie.
+
     renderPanel("media");
     renderPanel("gallery");
     changed();
@@ -671,9 +622,6 @@
     $("#gal-url").focus();
   }
 
-  /* ===================================================================
-     Actions
-     =================================================================== */
   function newGame() {
     const g = toEditable({
       title: "Nouveau projet",
@@ -795,7 +743,7 @@
       el.value = "";
       return;
     }
-    // Rafraîchit les miniatures quand un chemin est modifié à la main.
+
     if (el.dataset.f === "cover" || el.dataset.f === "hoverPreview") renderPanel("media");
     if (el.dataset.gal != null) {
       const g = current();
@@ -828,9 +776,6 @@
     }
   }
 
-  /* ===================================================================
-     Publication & export
-     =================================================================== */
   function validate() {
     const untitled = S.games.find((g) => !String(g.title || "").trim());
     if (untitled) {
@@ -853,7 +798,7 @@
   }
 
   async function publish() {
-    if (S.mode !== "github" || S.busy || !validate()) return;
+    if (S.mode !== "github" || !S.auth || S.busy || !validate()) return;
     const files = usedPendingPaths();
     if (!isDirty() && !files.length) { toast("Rien à publier : tout est déjà en ligne."); return; }
     S.busy = true;
@@ -898,18 +843,9 @@
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 
-    const files = usedPendingPaths();
-    if (files.length && S.mode === "local") {
-      setBanner(`<strong>games.js téléchargé.</strong> Remplace <code>data/games.js</code> par ce fichier, puis copie ces médias :
-        <ul class="file-map">${files.map((p) => `<li><span>${esc(S.pending[p].name)}</span> → <code>${esc(p)}</code></li>`).join("")}</ul>`, "info");
-    } else {
-      toast(S.mode === "local" ? "games.js téléchargé. Remplace data/games.js par ce fichier." : "games.js téléchargé (copie de sauvegarde).", "ok");
-    }
+    toast("games.js téléchargé.", "ok");
   }
 
-  /* ===================================================================
-     Aperçu en direct (le vrai site dans une iframe)
-     =================================================================== */
   const frame = $("#preview-frame");
 
   function sendPreview(scroll) {
@@ -919,7 +855,7 @@
     const games = S.games.map((g) => {
       const s = toSaved(g);
       if (!s.title) s.title = "Sans titre";
-      if (fiche && g === cur) delete s.hidden; // on peut prévisualiser un projet masqué
+      if (fiche && g === cur) delete s.hidden;
       return s;
     });
     const msg = { type: "pf-preview", games, style: S.previewStyle, open: fiche ? gameId(cur) : null, scroll: !!scroll };
@@ -927,7 +863,7 @@
       msg.files = { ...S.pending };
       S.sentFilesVersion = S.filesVersion;
     }
-    try { frame.contentWindow.postMessage(msg, "*"); } catch (e) { /* aperçu indisponible */ }
+    try { frame.contentWindow.postMessage(msg, "*"); } catch (e) { }
   }
   const schedulePreview = debounce(() => sendPreview(false), 250);
 
@@ -962,12 +898,8 @@
     $("#preview-close").addEventListener("click", () => { S.previewOpen = false; applyPreviewOpen(); });
   }
 
-  /* ===================================================================
-     Démarrage
-     =================================================================== */
   function init() {
     $("#login-form").addEventListener("submit", onLogin);
-    $("#local-btn").addEventListener("click", startLocal);
     $("#logout-btn").addEventListener("click", logout);
     $("#publish-btn").addEventListener("click", publish);
     $("#export-btn").addEventListener("click", exportFile);
@@ -980,7 +912,6 @@
     ed.addEventListener("keydown", onKeydown);
     ed.addEventListener("focusout", (e) => { if (e.target.id === "tech-input" && e.target.value.trim()) addTech(e.target); });
 
-    // Glisser-déposer dans la galerie
     ed.addEventListener("dragover", (e) => {
       const drop = e.target.closest("#drop");
       if (!drop) return;
@@ -996,11 +927,10 @@
       addFiles([...e.dataTransfer.files], "gallery");
     });
 
-    // Ctrl/Cmd + S : publier (ou exporter en mode local)
     document.addEventListener("keydown", (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && S.mode) {
         e.preventDefault();
-        if (S.mode === "github") publish(); else exportFile();
+        publish();
       }
     });
     window.addEventListener("beforeunload", (e) => {
@@ -1011,8 +941,11 @@
 
     const saved = storageGet(AUTH_KEY);
     if (saved && saved.token) {
-      S.auth = saved;
-      startGithub();
+      authenticate(saved.token).then(startGithub, () => {
+        storageRemove(AUTH_KEY);
+        S.auth = null;
+        showLogin();
+      });
     } else {
       showLogin();
     }

@@ -1,5 +1,3 @@
-/* Génère tout le site à partir de data/profile.js et data/games.js.
-   Pas besoin de toucher à ce fichier pour ajouter un jeu. */
 (function () {
   "use strict";
 
@@ -12,7 +10,6 @@
 
   const $ = (sel, root = document) => root.querySelector(sel);
 
-  /* ---------- Style (sombre / carnet) ---------- */
   const STYLE_KEY = "pf-style";
   const ICONS = {
     dark: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>`,
@@ -27,16 +24,15 @@
   }
   function initStyle() {
     let saved = null;
-    try { saved = localStorage.getItem(STYLE_KEY); } catch (e) { /* stockage indisponible */ }
+    try { saved = localStorage.getItem(STYLE_KEY); } catch (e) { }
     applyStyle(saved || P.defaultStyle || "dark");
     $("#style-toggle").addEventListener("click", () => {
       const next = document.documentElement.dataset.style === "dark" ? "sketch" : "dark";
       applyStyle(next);
-      try { localStorage.setItem(STYLE_KEY, next); } catch (e) { /* ignore */ }
+      try { localStorage.setItem(STYLE_KEY, next); } catch (e) { }
     });
   }
 
-  /* ---------- Nav ---------- */
   function initNav() {
     $("#logo").textContent = P.logo || P.name || "Portfolio";
     document.title = [P.name, P.role].filter(Boolean).join(" | ") || "Portfolio";
@@ -57,7 +53,6 @@
     menuBtn.addEventListener("click", () => setMenu(!links.classList.contains("open")));
     links.addEventListener("click", (e) => { if (e.target.closest("a")) setMenu(false); });
 
-    // Lien actif selon la section visible
     const anchors = [...links.querySelectorAll('a[href^="#"]')];
     const sections = anchors.map((a) => document.querySelector(a.getAttribute("href"))).filter(Boolean);
     if ("IntersectionObserver" in window) {
@@ -71,7 +66,6 @@
     }
   }
 
-  /* ---------- Hero ---------- */
   function renderHero() {
     const parts = String(P.name || "").trim().split(/\s+/);
     const last = parts.length > 1 ? parts.pop() : "";
@@ -87,7 +81,6 @@
       </div>`;
   }
 
-  /* ---------- Projets ---------- */
   const state = { cat: "all", tech: "all" };
 
   function renderSpotlight() {
@@ -155,7 +148,6 @@
     });
   }
 
-  /* ---------- À propos ---------- */
   function renderAbout() {
     const initials = String(P.name || "?").split(/\s+/).map((w) => w[0]).join("").slice(0, 3).toUpperCase();
     const skills = P.skills || [];
@@ -180,7 +172,6 @@
       </div>` : ""}`;
   }
 
-  /* ---------- Parcours ---------- */
   function renderTimeline() {
     const items = P.timeline || [];
     if (!items.length) { $("#parcours").hidden = true; document.querySelector('a[href="#parcours"]').hidden = true; return; }
@@ -196,7 +187,6 @@
       </li>`).join("");
   }
 
-  /* ---------- Contact & footer ---------- */
   function renderContact() {
     const c = P.contact || {};
     const links = c.links || [];
@@ -229,7 +219,6 @@
       <span class="footer-links">${links.map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join("")}</span>`;
   }
 
-  /* ---------- Fiche projet ---------- */
   const modal = $("#modal");
   let current = null;
   let mediaIndex = 0;
@@ -255,7 +244,7 @@
     if (!modal.open) modal.showModal();
     $("#modal-inner").scrollTop = keepMedia && sameProject ? scroll : 0;
     if (push && location.hash !== "#jeu-" + g.id) {
-      try { history.pushState(null, "", "#jeu-" + g.id); } catch (e) { /* historique indisponible */ }
+      try { history.pushState(null, "", "#jeu-" + g.id); } catch (e) { }
     }
     return true;
   }
@@ -282,10 +271,10 @@
       if (e.key === "ArrowRight") showMedia(mediaIndex + 1);
     });
     modal.addEventListener("close", () => {
-      $("#modal-inner").innerHTML = ""; // coupe vidéos, sons et iframes
+      $("#modal-inner").innerHTML = "";
       current = null;
       if (location.hash.startsWith("#jeu-")) {
-        try { history.replaceState(null, "", "#projets"); } catch (e) { /* ignore */ }
+        try { history.replaceState(null, "", "#projets"); } catch (e) { }
       }
     });
     const fromHash = () => {
@@ -297,9 +286,6 @@
     fromHash();
   }
 
-  /* ---------- Aperçu en direct depuis la page admin ---------- */
-  // Quand le site est affiché dans l'aperçu de admin.html, l'admin envoie
-  // les projets en cours d'édition et les fichiers pas encore publiés.
   function initPreviewBridge() {
     if (window.parent === window) return;
     let urls = {};
@@ -326,7 +312,6 @@
     window.parent.postMessage({ type: "pf-preview-ready" }, "*");
   }
 
-  /* ---------- Démarrage ---------- */
   initStyle();
   initNav();
   renderHero();
