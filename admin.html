@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr" data-style="dark">
+<html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -7,7 +7,7 @@
   <title>Admin du portfolio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;600&family=Caveat:wght@600;700&family=Patrick+Hand&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;600&display=swap">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/admin.css">
 </head>
@@ -50,6 +50,10 @@
     <div class="workspace" id="workspace">
       <aside class="sidebar">
         <div class="sidebar-head">
+          <p class="eyebrow">Site</p>
+        </div>
+        <ul class="project-list site-list" id="site-list"></ul>
+        <div class="sidebar-head sidebar-head-projects">
           <p class="eyebrow" id="list-count">Projets</p>
           <button class="btn btn-sm btn-accent" type="button" id="add-btn">+ Nouveau</button>
         </div>
@@ -63,10 +67,6 @@
           <div class="seg" role="group" aria-label="Que montrer">
             <button type="button" data-pmode="fiche" aria-pressed="true">Fiche</button>
             <button type="button" data-pmode="list" aria-pressed="false">Liste</button>
-          </div>
-          <div class="seg" role="group" aria-label="Style de l'aperçu">
-            <button type="button" data-pstyle="dark" aria-pressed="true">Sombre</button>
-            <button type="button" data-pstyle="sketch" aria-pressed="false">Carnet</button>
           </div>
           <button class="icon-btn preview-close" type="button" id="preview-close" aria-label="Fermer l'aperçu">✕</button>
         </div>

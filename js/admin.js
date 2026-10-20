@@ -3,10 +3,8 @@
 
   const R = window.PFRender;
   const { esc, slugify } = R;
-  const P = window.PROFILE || {};
-  const CFG = { owner: "", repo: "", branch: "main", ...(P.admin || {}) };
-  const CATS = P.categories || [];
-  const catLabel = (id) => (CATS.find((c) => c.id === id) || {}).label || id || "";
+  const P0 = window.PROFILE || {};
+  const CFG = { owner: "", repo: "", branch: "main", ...(P0.admin || {}) };
 
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -19,26 +17,89 @@
   const ENGINES = ["Unity", "Godot", "Unreal Engine", "GameMaker", "Construct", "Bevy", "Love2D", "Pico-8", "RPG Maker"];
   const COLORS = ["#c28a2c", "#2f7a8c", "#3d4f6b", "#b4495a", "#5d7a5a", "#7b4bb3", "#a8553a", "#2d6a4f"];
 
+  const SITE_PAGES = [
+    { key: "profile", label: "Profil", section: "accueil" },
+    { key: "about", label: "À propos & compétences", section: "apropos" },
+    { key: "journey", label: "Parcours", section: "parcours" },
+    { key: "contact", label: "Contact", section: "contact" },
+    { key: "categories", label: "Catégories", section: "projets" },
+    { key: "texts", label: "Textes du site", section: "accueil" }
+  ];
+
+  const TEXT_GROUPS = [
+    ["Menu", [
+      ["navHome", "Accueil"], ["navProjects", "Projets"], ["navAbout", "À propos"], ["navJourney", "Parcours"],
+      ["navContact", "Contact"], ["navCta", "Bouton en haut à droite"], ["navAdmin", "Lien Admin"]
+    ]],
+    ["Accueil", [
+      ["heroProjects", "Bouton principal"], ["heroCv", "Bouton CV"], ["heroAbout", "Bouton secondaire sans CV"]
+    ]],
+    ["Projets", [
+      ["projectsEyebrow", "Petit titre après le nombre"], ["projectsTitle", "Titre de la section"],
+      ["filterType", "Libellé du filtre par type"], ["filterAll", "Filtre : tous les types"],
+      ["filterTech", "Libellé du filtre par techno"], ["filterAllTech", "Filtre : toutes les technos"],
+      ["badgeFeatured", "Badge à la une"], ["cardMore", "Lien des cartes"],
+      ["emptyFilters", "Message sans résultat"], ["resetFilters", "Bouton de réinitialisation"]
+    ]],
+    ["Fiche projet", [
+      ["ficheMenu", "Menu de tous les projets"], ["ficheContribution", "Titre de la contribution"], ["ficheTech", "Titre des technos"],
+      ["factYear", "Année"], ["factType", "Type"], ["factJam", "Jam"], ["factDuration", "Durée"],
+      ["factTeam", "Équipe"], ["factRole", "Rôle"], ["factEngine", "Moteur"]
+    ]],
+    ["À propos", [
+      ["aboutEyebrow", "Petit titre"], ["aboutTitle", "Titre"], ["skillsTitle", "Titre des compétences"]
+    ]],
+    ["Parcours", [
+      ["journeyEyebrow", "Petit titre"], ["journeyTitle", "Titre"], ["journeyEdu", "Étiquette formation"], ["journeyWork", "Étiquette expérience"]
+    ]],
+    ["Contact", [
+      ["contactEyebrow", "Petit titre"], ["contactTitle", "Titre"], ["contactCopy", "Bouton copier"],
+      ["contactCopied", "Bouton après copie"], ["contactCv", "Bouton CV"]
+    ]],
+    ["Pied de page", [
+      ["footerText", "Texte après le nom"]
+    ]]
+  ];
+
+  const LIST_TEMPLATES = {
+    skills: () => ({ group: "", items: [] }),
+    timeline: () => ({ type: "edu", date: "", title: "", place: "", text: "" }),
+    "contact.links": () => ({ label: "", url: "" }),
+    categories: () => ({ id: uniqueCatId(), label: "Nouvelle catégorie" })
+  };
+
   const S = {
     mode: null,
     auth: null,
     games: [],
+    profile: null,
+    adminBlock: { ...(P0.admin || {}) },
+    view: "game",
     selected: null,
     published: "[]",
+    publishedProfile: "{}",
     pending: {},
     blobUrls: {},
     filesVersion: 0,
     sentFilesVersion: -1,
     frameReady: false,
     previewMode: "fiche",
-    previewStyle: P.defaultStyle || "dark",
     previewOpen: window.innerWidth >= 1280,
     busy: false
   };
 
   const uid = () => Math.random().toString(36).slice(2, 10);
-  const current = () => S.games.find((g) => g._uid === S.selected) || null;
+  const current = () => (S.view === "game" ? S.games.find((g) => g._uid === S.selected) || null : null);
   const gameId = (g) => g.id || slugify(g.title || "Sans titre");
+  const cats = () => (S.profile && S.profile.categories) || [];
+  const catLabel = (id) => (cats().find((c) => c.id === id) || {}).label || id || "";
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+
+  function uniqueCatId() {
+    let i = cats().length + 1;
+    while (cats().some((c) => c.id === `cat-${i}`)) i++;
+    return `cat-${i}`;
+  }
 
   function debounce(fn, ms) {
     let t;
@@ -74,6 +135,20 @@
   function storageRemove(key) {
     try { localStorage.removeItem(key); sessionStorage.removeItem(key); } catch (e) { }
   }
+  function getPath(obj, path) {
+    return path.split(".").reduce((o, k) => (o == null ? o : o[/^\d+$/.test(k) ? Number(k) : k]), obj);
+  }
+  function setPath(obj, path, value) {
+    const parts = path.split(".");
+    let o = obj;
+    parts.slice(0, -1).forEach((k, i) => {
+      const key = /^\d+$/.test(k) ? Number(k) : k;
+      if (o[key] == null) o[key] = /^\d+$/.test(parts[i + 1]) ? [] : {};
+      o = o[key];
+    });
+    const last = parts[parts.length - 1];
+    o[/^\d+$/.test(last) ? Number(last) : last] = value;
+  }
 
   function toEditable(g) {
     const e = { ...g };
@@ -105,28 +180,88 @@
     return out;
   }
 
+  function toEditableProfile(p) {
+    const src = clone(p || {});
+    delete src.admin;
+    delete src.defaultStyle;
+    const c = src.contact || {};
+    return {
+      ...src,
+      name: src.name || "",
+      logo: src.logo || "",
+      role: src.role || "",
+      status: src.status || "",
+      location: src.location || "",
+      intro: src.intro || "",
+      avatar: src.avatar || "",
+      about: [...(src.about || [])],
+      skills: (src.skills || []).map((s) => ({ group: s.group || "", items: [...(s.items || [])] })),
+      timeline: (src.timeline || []).map((t) => ({ type: t.type === "work" ? "work" : "edu", date: t.date || "", title: t.title || "", place: t.place || "", text: t.text || "" })),
+      contact: { pitch: c.pitch || "", email: c.email || "", cv: c.cv || "", links: (c.links || []).map((l) => ({ label: l.label || "", url: l.url || "" })) },
+      categories: (src.categories || []).map((x) => ({ id: x.id, label: x.label || "" })),
+      texts: { ...R.DEFAULT_TEXTS, ...(src.texts || {}) }
+    };
+  }
+
+  function profileSaved() {
+    const p = S.profile;
+    const t = (v) => String(v ?? "").trim();
+    const texts = {};
+    Object.keys(R.DEFAULT_TEXTS).forEach((k) => { texts[k] = t(p.texts[k]); });
+    Object.keys(p.texts).forEach((k) => { if (!(k in texts)) texts[k] = t(p.texts[k]); });
+    const out = {
+      name: t(p.name),
+      logo: t(p.logo),
+      role: t(p.role),
+      status: t(p.status),
+      location: t(p.location),
+      intro: t(p.intro),
+      avatar: t(p.avatar),
+      about: p.about.map(t).filter(Boolean),
+      skills: p.skills.map((s) => ({ group: t(s.group), items: s.items.map(t).filter(Boolean) })).filter((s) => s.group || s.items.length),
+      timeline: p.timeline.map((x) => ({ type: x.type, date: t(x.date), title: t(x.title), place: t(x.place), text: t(x.text) })).filter((x) => x.date || x.title || x.place || x.text),
+      contact: {
+        pitch: t(p.contact.pitch),
+        email: t(p.contact.email),
+        cv: t(p.contact.cv),
+        links: p.contact.links.filter((l) => t(l.url)).map((l) => ({ label: t(l.label) || "Lien", url: t(l.url) }))
+      },
+      categories: p.categories.filter((c) => c.id).map((c) => ({ id: c.id, label: t(c.label) || c.id })),
+      texts
+    };
+    const known = new Set(["name", "logo", "role", "status", "location", "intro", "avatar", "about", "skills", "timeline", "contact", "categories", "texts", "admin", "defaultStyle"]);
+    Object.keys(p).forEach((k) => { if (!known.has(k)) out[k] = p[k]; });
+    out.admin = S.adminBlock;
+    return out;
+  }
+
   const savedList = () => S.games.map(toSaved);
   const snapshot = () => JSON.stringify(savedList());
-  const isDirty = () => snapshot() !== S.published;
+  const profileSnapshot = () => JSON.stringify(profileSaved());
+  const gamesDirty = () => snapshot() !== S.published;
+  const profileDirty = () => !!S.profile && profileSnapshot() !== S.publishedProfile;
+  const isDirty = () => gamesDirty() || profileDirty();
 
   function usedPendingPaths() {
     const used = new Set();
     S.games.forEach((g) => [g.cover, g.hoverPreview, ...(g.gallery || [])].forEach((p) => p && used.add(String(p).trim())));
+    if (S.profile) [S.profile.avatar, S.profile.contact.cv].forEach((p) => p && used.add(String(p).trim()));
     return Object.keys(S.pending).filter((p) => used.has(p));
   }
 
   const gamesFileContent = () => `window.GAMES = ${JSON.stringify(savedList(), null, 2)};\n`;
+  const profileFileContent = () => `window.PROFILE = ${JSON.stringify(profileSaved(), null, 2)};\n`;
 
-  function parseGamesFile(code) {
+  function parseDataFile(code, key) {
     const w = {};
     new Function("window", code)(w);
-    if (!Array.isArray(w.GAMES)) throw new Error("Le fichier data/games.js ne contient pas window.GAMES.");
-    return w.GAMES;
+    if (!w[key]) throw new Error(`window.${key} introuvable.`);
+    return w[key];
   }
 
   const saveDraft = debounce(() => {
     try {
-      if (isDirty()) localStorage.setItem(DRAFT_KEY, JSON.stringify({ games: savedList(), savedAt: Date.now() }));
+      if (isDirty()) localStorage.setItem(DRAFT_KEY, JSON.stringify({ games: savedList(), profile: profileSaved(), savedAt: Date.now() }));
       else localStorage.removeItem(DRAFT_KEY);
     } catch (e) { }
   }, 400);
@@ -169,7 +304,7 @@
     switch (err.status) {
       case 401: return "GitHub refuse ce token : il est invalide ou a expiré.";
       case 403: return "GitHub refuse l'accès. Vérifie que le token a la permission « Contents : Read and write » sur ce dépôt.";
-      case 404: return "Dépôt ou branche introuvable. Vérifie le compte, le nom du dépôt, la branche, et que le token a accès à ce dépôt.";
+      case 404: return "Dépôt ou branche introuvable.";
       case 409: return "Le dépôt a changé pendant l'envoi. Clique à nouveau sur Publier.";
       case 422: return `GitHub a refusé le fichier : ${err.message}`;
       default: return err.message || "Erreur inconnue.";
@@ -223,7 +358,7 @@
     if (dirty || files) {
       const parts = [];
       if (dirty) parts.push("modifications non publiées");
-      if (files) parts.push(`${files} média${files > 1 ? "s" : ""} à envoyer`);
+      if (files) parts.push(`${files} fichier${files > 1 ? "s" : ""} à envoyer`);
       el.textContent = parts.join(" · ").replace(/^./, (c) => c.toUpperCase());
       el.className = "save-state dirty";
     } else {
@@ -279,13 +414,14 @@
   async function startGithub() {
     S.mode = "github";
     showApp();
-    setBanner("Chargement des projets depuis GitHub…");
-    let source = window.GAMES || [];
+    setBanner("Chargement depuis GitHub…");
+    let games = window.GAMES || [];
+    let profile = P0;
     try {
-      const f = await getFile("data/games.js");
-      if (f && f.content) source = parseGamesFile(b64ToUtf8(f.content));
+      const [gf, pf] = await Promise.all([getFile("data/games.js"), getFile("data/profile.js")]);
+      if (gf && gf.content) games = parseDataFile(b64ToUtf8(gf.content), "GAMES");
+      if (pf && pf.content) profile = parseDataFile(b64ToUtf8(pf.content), "PROFILE");
       setBanner("");
-      if (!f) setBanner("Le dépôt ne contient pas encore <code>data/games.js</code>. Il sera créé à la première publication.", "info");
     } catch (err) {
       if (err.status === 401 || err.status === 403 || err.status === 404) {
         storageRemove(AUTH_KEY);
@@ -294,21 +430,31 @@
         showLogin("Accès refusé.");
         return;
       }
-      setBanner(`Impossible de lire <code>data/games.js</code> sur GitHub (${esc(err.status ? ghMessage(err) : err.message)}). Les projets affichés viennent de la version en ligne du site.`, "error");
+      setBanner(`Impossible de lire les données sur GitHub (${esc(err.status ? ghMessage(err) : err.message)}). Les données affichées viennent de la version en ligne du site.`, "error");
     }
-    loadGames(source);
+    loadData(games, profile);
   }
 
-  function loadGames(source) {
-    S.games = source.map(toEditable);
+  function loadData(games, profile) {
+    if (profile.admin) S.adminBlock = { ...profile.admin };
+    S.games = games.map(toEditable);
+    S.profile = toEditableProfile(profile);
     S.published = snapshot();
+    S.publishedProfile = profileSnapshot();
     const draft = storageGet(DRAFT_KEY);
-    if (draft && Array.isArray(draft.games) && JSON.stringify(draft.games) !== S.published) {
-      S.games = draft.games.map(toEditable);
-      const when = new Date(draft.savedAt || Date.now()).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
-      setBanner(`Brouillon non publié du ${esc(when)} restauré. <button class="link-btn" type="button" data-act="discard-draft">Revenir à la version publiée</button>`, "info");
+    if (draft && Array.isArray(draft.games)) {
+      const draftProfile = draft.profile ? toEditableProfile(draft.profile) : null;
+      const differs = JSON.stringify(draft.games) !== S.published || (draftProfile && JSON.stringify(draft.profile) !== S.publishedProfile);
+      if (differs) {
+        S.games = draft.games.map(toEditable);
+        if (draftProfile) S.profile = draftProfile;
+        const when = new Date(draft.savedAt || Date.now()).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
+        setBanner(`Brouillon non publié du ${esc(when)} restauré. <button class="link-btn" type="button" data-act="discard-draft">Revenir à la version publiée</button>`, "info");
+      }
     }
+    S.view = "game";
     S.selected = S.games[0] ? S.games[0]._uid : null;
+    if (!S.selected) S.view = "profile";
     renderAll();
   }
 
@@ -322,17 +468,25 @@
   }
 
   function smallThumb(g) {
-    if (g.cover && R.mediaType(g.cover) === "img") {
-      return `<img src="${esc(R.src(g.cover))}" alt="" onerror="this.remove()"><span class="pl-initial" style="--ph:${esc(g.color || "#4a4540")}">${esc((g.title || "?").charAt(0))}</span>`;
-    }
-    return `<span class="pl-initial" style="--ph:${esc(g.color || "#4a4540")}">${esc((g.title || "?").charAt(0))}</span>`;
+    const initial = `<span class="pl-initial" style="--ph:${esc(g.color || "#4a4540")}">${esc((g.title || "?").charAt(0))}</span>`;
+    if (g.cover && R.mediaType(g.cover) === "img") return `<img src="${esc(R.src(g.cover))}" alt="" onerror="this.remove()">${initial}`;
+    return initial;
   }
 
   function renderList() {
+    $("#site-list").innerHTML = SITE_PAGES.map((p) => `
+      <li class="pl-item${S.view === p.key ? " selected" : ""}">
+        <button class="pl-main site-item" type="button" data-act="site" data-page="${p.key}" aria-current="${S.view === p.key}">
+          <span class="pl-text"><strong>${esc(p.label)}</strong></span>
+        </button>
+      </li>`).join("");
+
     $("#list-count").textContent = `${S.games.length} projet${S.games.length > 1 ? "s" : ""}`;
-    $("#project-list").innerHTML = S.games.map((g, i) => `
-      <li class="pl-item${g._uid === S.selected ? " selected" : ""}${g.hidden ? " is-hidden" : ""}">
-        <button class="pl-main" type="button" data-act="select" data-uid="${g._uid}" aria-current="${g._uid === S.selected}">
+    $("#project-list").innerHTML = S.games.map((g, i) => {
+      const sel = S.view === "game" && g._uid === S.selected;
+      return `
+      <li class="pl-item${sel ? " selected" : ""}${g.hidden ? " is-hidden" : ""}">
+        <button class="pl-main" type="button" data-act="select" data-uid="${g._uid}" aria-current="${sel}">
           <span class="pl-thumb">${smallThumb(g)}</span>
           <span class="pl-text">
             <strong>${esc(g.title || "Sans titre")}</strong>
@@ -344,86 +498,104 @@
           <button class="icon-btn" type="button" data-act="up" data-uid="${g._uid}" aria-label="Monter ${esc(g.title)}" ${i === 0 ? "disabled" : ""}>↑</button>
           <button class="icon-btn" type="button" data-act="down" data-uid="${g._uid}" aria-label="Descendre ${esc(g.title)}" ${i === S.games.length - 1 ? "disabled" : ""}>↓</button>
         </span>
-      </li>`).join("");
+      </li>`;
+    }).join("");
 
     const techs = new Set();
     S.games.forEach((g) => (g.tech || []).forEach((t) => techs.add(t)));
-    (P.skills || []).forEach((s) => (s.items || []).forEach((t) => techs.add(t.replace(/\s*\(.*\)$/, ""))));
-    $("#tech-list").innerHTML = [...techs].sort().map((t) => `<option value="${esc(t)}"></option>`).join("");
+    if (S.profile) S.profile.skills.forEach((s) => s.items.forEach((t) => techs.add(t.replace(/\s*\(.*\)$/, ""))));
+    $("#tech-list").innerHTML = [...techs].filter(Boolean).sort().map((t) => `<option value="${esc(t)}"></option>`).join("");
   }
 
   function field(label, f, value, attrs = "", cls = "") {
     return `<label class="field ${cls}"><span>${label}</span><input data-f="${f}" value="${esc(value ?? "")}" ${attrs}></label>`;
   }
+  function pfield(label, path, attrs = "", cls = "") {
+    return `<label class="field ${cls}"><span>${label}</span><input data-p="${path}" value="${esc(getPath(S.profile, path) ?? "")}" ${attrs}></label>`;
+  }
+  function parea(label, path, rows = 4, kind = "", value = null) {
+    const v = value != null ? value : getPath(S.profile, path) ?? "";
+    return `<label class="field"><span>${label}</span><textarea data-p="${path}" ${kind ? `data-kind="${kind}"` : ""} rows="${rows}">${esc(v)}</textarea></label>`;
+  }
 
-  function mediaThumb(path, g) {
+  function mediaThumb(path) {
     const type = R.mediaType(path);
+    if (/\.pdf(\?|#|$)/i.test(path)) return `<span class="mt-icon">PDF</span>`;
     if (type === "yt") return `<img src="https://img.youtube.com/vi/${R.ytId(path)}/mqdefault.jpg" alt=""><span class="mt-badge">▶</span>`;
     if (type === "audio") return `<span class="mt-icon">♪</span>`;
     if (type === "video") return `<video src="${esc(R.src(path))}" muted preload="metadata"></video><span class="mt-badge">▶</span>`;
     return `<img src="${esc(R.src(path))}" alt="" onerror="this.parentNode.classList.add('missing');this.remove()">`;
   }
 
-  function pendingHint(path) {
-    return S.pending[path] ? `<span class="pending">Nouveau fichier, envoyé à la publication.</span>` : "";
-  }
+  const pendingHint = (path) => (S.pending[path] ? `<span class="pending">Nouveau fichier, envoyé à la publication.</span>` : "");
 
-  function mediaField(f, label, hint, accept) {
-    const g = current();
-    const v = g[f] || "";
+  function mediaBlock(value, inputAttr, label, hint, accept, uploadTarget, clearAttr) {
     return `
       <div class="media-field">
-        <div class="mf-thumb">${v ? mediaThumb(v, g) : `<span class="mt-empty">Aucun</span>`}</div>
+        <div class="mf-thumb">${value ? mediaThumb(value) : `<span class="mt-empty">Aucun</span>`}</div>
         <div class="mf-body">
-          <label class="field"><span>${label}</span><input data-f="${f}" value="${esc(v)}" placeholder="assets/games/… ou https://…" spellcheck="false"></label>
+          <label class="field"><span>${label}</span><input ${inputAttr} value="${esc(value)}" placeholder="assets/… ou https://…" spellcheck="false"></label>
           <div class="mf-actions">
-            <label class="btn btn-sm file-btn">Importer un fichier<input type="file" accept="${accept}" data-upload="${f}"></label>
-            ${v ? `<button class="btn btn-sm btn-ghost" type="button" data-act="clear-media" data-f="${f}">Retirer</button>` : ""}
+            <label class="btn btn-sm file-btn">Importer un fichier<input type="file" accept="${accept}" data-upload="${uploadTarget}"></label>
+            ${value ? `<button class="btn btn-sm btn-ghost" type="button" ${clearAttr}>Retirer</button>` : ""}
           </div>
-          <p class="hint">${pendingHint(v) || hint}</p>
+          <p class="hint">${pendingHint(value) || hint}</p>
         </div>
+      </div>`;
+  }
+
+  const mediaField = (f, label, hint, accept) =>
+    mediaBlock(current()[f] || "", `data-f="${f}"`, label, hint, accept, f, `data-act="clear-media" data-f="${f}"`);
+  const profileMedia = (path, label, hint, accept) =>
+    mediaBlock(getPath(S.profile, path) || "", `data-p="${path}"`, label, hint, accept, `p:${path}`, `data-act="clear-p" data-p="${path}"`);
+
+  function rowActions(list, i, len) {
+    return `
+      <div class="row-actions">
+        <button class="icon-btn" type="button" data-act="list-up" data-list="${list}" data-i="${i}" aria-label="Monter" ${i === 0 ? "disabled" : ""}>↑</button>
+        <button class="icon-btn" type="button" data-act="list-down" data-list="${list}" data-i="${i}" aria-label="Descendre" ${i === len - 1 ? "disabled" : ""}>↓</button>
+        <button class="icon-btn danger" type="button" data-act="list-remove" data-list="${list}" data-i="${i}" aria-label="Supprimer">✕</button>
       </div>`;
   }
 
   const PANELS = {
     info(g) {
-      const cats = CATS.some((c) => c.id === g.category) || !g.category ? CATS : [...CATS, { id: g.category, label: g.category }];
+      const list = cats().some((c) => c.id === g.category) || !g.category ? cats() : [...cats(), { id: g.category, label: g.category }];
       return `
         <h2>Infos</h2>
         <div class="field-grid">
           ${field("Titre", "title", g.title, 'required maxlength="80"', "span-2")}
-          ${field("Accroche (affichée sur la carte)", "tagline", g.tagline, 'maxlength="140"', "span-2")}
+          ${field("Accroche", "tagline", g.tagline, 'maxlength="140"', "span-2")}
           <label class="field"><span>Catégorie</span>
             <select data-f="category">
               <option value="">Aucune</option>
-              ${cats.map((c) => `<option value="${esc(c.id)}" ${c.id === g.category ? "selected" : ""}>${esc(c.label)}</option>`).join("")}
+              ${list.map((c) => `<option value="${esc(c.id)}" ${c.id === g.category ? "selected" : ""}>${esc(c.label)}</option>`).join("")}
             </select>
           </label>
-          ${field("Game jam", "jam", g.jam, 'placeholder="ex. GMTK Game Jam 2025"')}
-          ${field("Année", "year", g.year, 'inputmode="numeric" placeholder="2025"')}
-          ${field("Durée", "duration", g.duration, 'placeholder="48 h, 3 mois…"')}
-          ${field("Équipe", "team", g.team, 'placeholder="Solo, 4 personnes…"')}
-          ${field("Mon rôle", "role", g.role, 'placeholder="Gameplay Programmer"')}
+          ${field("Game jam", "jam", g.jam)}
+          ${field("Année", "year", g.year, 'inputmode="numeric"')}
+          ${field("Durée", "duration", g.duration)}
+          ${field("Équipe", "team", g.team)}
+          ${field("Mon rôle", "role", g.role)}
           ${field("Moteur", "engine", g.engine, 'list="engine-list"')}
           <label class="field"><span>Couleur de la vignette</span>
-            <span class="color-row"><input type="color" data-f="color" value="${esc(/^#[0-9a-f]{6}$/i.test(g.color || "") ? g.color : "#4a4540")}"><small>Utilisée quand il n'y a pas d'image</small></span>
+            <span class="color-row"><input type="color" data-f="color" value="${esc(/^#[0-9a-f]{6}$/i.test(g.color || "") ? g.color : "#4a4540")}"></span>
           </label>
         </div>
         <datalist id="engine-list">${ENGINES.map((e) => `<option value="${esc(e)}"></option>`).join("")}</datalist>
         <div class="toggles">
-          <label class="check"><input type="checkbox" data-f="featured" ${g.featured ? "checked" : ""}> Mettre à la une <small>(le premier projet « à la une » est affiché en grand)</small></label>
-          <label class="check"><input type="checkbox" data-f="hidden" ${g.hidden ? "checked" : ""}> Masquer du site <small>(garde le projet sans l'afficher)</small></label>
+          <label class="check"><input type="checkbox" data-f="featured" ${g.featured ? "checked" : ""}> Mettre à la une</label>
+          <label class="check"><input type="checkbox" data-f="hidden" ${g.hidden ? "checked" : ""}> Masquer du site</label>
         </div>`;
     },
     desc(g) {
       return `
         <h2>Description</h2>
         <label class="field"><span>Texte de la fiche</span>
-          <textarea data-f="description" rows="7" placeholder="Présente le jeu : le concept, le contexte, ce qui le rend unique.">${esc(g.description || "")}</textarea>
+          <textarea data-f="description" rows="7">${esc(g.description || "")}</textarea>
         </label>
-        <p class="hint">Laisse une ligne vide pour commencer un nouveau paragraphe.</p>
-        <label class="field"><span>Ma contribution (un point par ligne)</span>
-          <textarea data-f="highlights" data-kind="lines" rows="4" placeholder="Contrôleur du personnage&#10;IA des ennemis">${esc((g.highlights || []).join("\n"))}</textarea>
+        <label class="field"><span>Ma contribution, un point par ligne</span>
+          <textarea data-f="highlights" data-kind="lines" rows="4">${esc((g.highlights || []).join("\n"))}</textarea>
         </label>`;
     },
     tech(g) {
@@ -431,43 +603,38 @@
         <h2>Technos</h2>
         <div class="chips-input" id="chips-input">
           ${(g.tech || []).map((t, i) => `<span class="chip-tag">${esc(t)}<button type="button" data-act="tech-remove" data-i="${i}" aria-label="Retirer ${esc(t)}">✕</button></span>`).join("")}
-          <input id="tech-input" list="tech-list" placeholder="${(g.tech || []).length ? "Ajouter…" : "C#, Unity, Blender…"}" aria-label="Ajouter une techno" spellcheck="false">
-        </div>
-        <p class="hint">Entrée ou virgule pour ajouter. Les technos servent aussi de filtres sur le site.</p>`;
+          <input id="tech-input" list="tech-list" placeholder="Ajouter…" aria-label="Ajouter une techno" spellcheck="false">
+        </div>`;
     },
-    media(g) {
+    media() {
       return `
         <h2>Vignette &amp; aperçu</h2>
-        ${mediaField("cover", "Image de couverture", "Affichée sur la carte et en tête de fiche. Format 16:9 conseillé (1280×720).", "image/*")}
-        ${mediaField("hoverPreview", "Aperçu au survol (optionnel)", "Courte vidéo .mp4 ou GIF lue quand on survole la carte. Quelques secondes, sans son.", "video/mp4,video/webm,image/gif")}`;
+        ${mediaField("cover", "Image de couverture", "Format 16:9 conseillé.", "image/*")}
+        ${mediaField("hoverPreview", "Aperçu au survol", "Courte vidéo .mp4 ou GIF.", "video/mp4,video/webm,image/gif")}`;
     },
     gallery(g) {
       const list = g.gallery || [];
       return `
         <h2>Galerie</h2>
-        <p class="hint">Images, vidéos .mp4, sons .mp3 et liens YouTube. Le premier média s'affiche en premier dans la fiche.</p>
-        ${list.length ? `<ul class="gal-list">${list.map((p, i) => {
-          const type = R.mediaType(p);
-          return `
+        ${list.length ? `<ul class="gal-list">${list.map((p, i) => `
             <li class="gal-item">
-              <div class="gal-thumb">${mediaThumb(p, g)}</div>
+              <div class="gal-thumb">${mediaThumb(p)}</div>
               <div class="gal-body">
-                <span class="gal-type">${TYPE_LABEL[type]}${S.pending[p] ? ` · <span class="pending">à envoyer</span>` : ""}</span>
-                <input data-gal="${i}" value="${esc(p)}" spellcheck="false" aria-label="Chemin ou lien du média ${i + 1}">
+                <span class="gal-type">${TYPE_LABEL[R.mediaType(p)]}${S.pending[p] ? ` · <span class="pending">à envoyer</span>` : ""}</span>
+                <input data-gal="${i}" value="${esc(p)}" spellcheck="false" aria-label="Média ${i + 1}">
               </div>
               <div class="gal-actions">
                 <button class="icon-btn" type="button" data-act="gal-up" data-i="${i}" aria-label="Monter" ${i === 0 ? "disabled" : ""}>↑</button>
                 <button class="icon-btn" type="button" data-act="gal-down" data-i="${i}" aria-label="Descendre" ${i === list.length - 1 ? "disabled" : ""}>↓</button>
-                <button class="icon-btn danger" type="button" data-act="gal-remove" data-i="${i}" aria-label="Retirer ce média">✕</button>
+                <button class="icon-btn danger" type="button" data-act="gal-remove" data-i="${i}" aria-label="Retirer">✕</button>
               </div>
-            </li>`;
-        }).join("")}</ul>` : `<p class="empty-note">Aucun média pour l'instant. Sans galerie, la fiche affiche la couverture.</p>`}
+            </li>`).join("")}</ul>` : `<p class="empty-note">Aucun média.</p>`}
         <div class="drop" id="drop">
           <p>Glisse tes fichiers ici, ou</p>
           <label class="btn btn-sm file-btn">Choisir des fichiers<input type="file" multiple accept="image/*,video/mp4,video/webm,audio/*" data-upload="gallery"></label>
         </div>
         <div class="url-add">
-          <input id="gal-url" placeholder="Lien YouTube ou URL d'une image / vidéo" spellcheck="false" aria-label="Ajouter un média par lien">
+          <input id="gal-url" placeholder="Lien YouTube ou URL" spellcheck="false" aria-label="Ajouter un média par lien">
           <button class="btn btn-sm" type="button" data-act="gal-add-url">Ajouter</button>
         </div>`;
     },
@@ -481,12 +648,129 @@
             <input data-link="${i}" data-k="url" value="${esc(l.url)}" type="url" placeholder="https://…" aria-label="Adresse du lien ${i + 1}" spellcheck="false">
             <button class="icon-btn danger" type="button" data-act="link-remove" data-i="${i}" aria-label="Retirer ce lien">✕</button>
           </div>`).join("")}
-        <p class="hint">Le premier lien est mis en avant dans la fiche (bouton plein).</p>
         <button class="btn btn-sm" type="button" data-act="link-add">+ Ajouter un lien</button>`;
     }
   };
   const PANEL_ORDER = ["info", "desc", "tech", "media", "gallery", "links"];
   const panelHTML = (name, g) => `<section class="panel" id="panel-${name}">${PANELS[name](g)}</section>`;
+
+  const SITE = {
+    profile() {
+      return `
+        <section class="panel">
+          <h2>Identité</h2>
+          <div class="field-grid">
+            ${pfield("Nom", "name")}
+            ${pfield("Texte du logo", "logo")}
+            ${pfield("Rôle", "role", "", "span-2")}
+            ${pfield("Statut", "status")}
+            ${pfield("Ville", "location")}
+          </div>
+          ${parea("Présentation", "intro", 3)}
+        </section>
+        <section class="panel">
+          <h2>Photo</h2>
+          ${profileMedia("avatar", "Photo de profil", "Image carrée conseillée.", "image/*")}
+        </section>`;
+    },
+    about() {
+      const p = S.profile;
+      return `
+        <section class="panel">
+          <h2>À propos</h2>
+          ${parea("Texte, une ligne vide entre deux paragraphes", "about", 8, "paras", p.about.join("\n\n"))}
+        </section>
+        <section class="panel">
+          <h2>Compétences</h2>
+          ${p.skills.map((s, i) => `
+            <div class="row-card">
+              <div class="field-grid">
+                ${pfield("Groupe", `skills.${i}.group`)}
+                <label class="field"><span>Éléments, séparés par des virgules</span><input data-p="skills.${i}.items" data-kind="csv" value="${esc(s.items.join(", "))}"></label>
+              </div>
+              ${rowActions("skills", i, p.skills.length)}
+            </div>`).join("")}
+          <button class="btn btn-sm" type="button" data-act="list-add" data-list="skills">+ Ajouter un groupe</button>
+        </section>`;
+    },
+    journey() {
+      const p = S.profile;
+      return `
+        <section class="panel">
+          <h2>Parcours</h2>
+          ${p.timeline.map((t, i) => `
+            <div class="row-card">
+              <div class="field-grid">
+                <label class="field"><span>Type</span>
+                  <select data-p="timeline.${i}.type">
+                    <option value="edu" ${t.type === "edu" ? "selected" : ""}>${esc(p.texts.journeyEdu || "Formation")}</option>
+                    <option value="work" ${t.type === "work" ? "selected" : ""}>${esc(p.texts.journeyWork || "Expérience")}</option>
+                  </select>
+                </label>
+                ${pfield("Date", `timeline.${i}.date`)}
+                ${pfield("Intitulé", `timeline.${i}.title`)}
+                ${pfield("Lieu", `timeline.${i}.place`)}
+              </div>
+              ${parea("Description", `timeline.${i}.text`, 2)}
+              ${rowActions("timeline", i, p.timeline.length)}
+            </div>`).join("")}
+          <button class="btn btn-sm" type="button" data-act="list-add" data-list="timeline">+ Ajouter une étape</button>
+        </section>`;
+    },
+    contact() {
+      const p = S.profile;
+      return `
+        <section class="panel">
+          <h2>Contact</h2>
+          ${parea("Phrase d'accroche", "contact.pitch", 2)}
+          ${pfield("Email", "contact.email", 'type="email" spellcheck="false"')}
+        </section>
+        <section class="panel">
+          <h2>CV</h2>
+          ${profileMedia("contact.cv", "Fichier du CV", "PDF.", "application/pdf")}
+        </section>
+        <section class="panel">
+          <h2>Liens</h2>
+          ${p.contact.links.map((l, i) => `
+            <div class="row-card row-inline">
+              <div class="field-grid">
+                ${pfield("Libellé", `contact.links.${i}.label`, 'list="link-labels"')}
+                ${pfield("Adresse", `contact.links.${i}.url`, 'type="url" spellcheck="false"')}
+              </div>
+              ${rowActions("contact.links", i, p.contact.links.length)}
+            </div>`).join("")}
+          <button class="btn btn-sm" type="button" data-act="list-add" data-list="contact.links">+ Ajouter un lien</button>
+        </section>`;
+    },
+    categories() {
+      const p = S.profile;
+      return `
+        <section class="panel">
+          <h2>Catégories</h2>
+          ${p.categories.map((c, i) => {
+            const n = S.games.filter((g) => g.category === c.id).length;
+            return `
+            <div class="row-card row-inline">
+              <div class="field-grid">
+                ${pfield("Nom affiché", `categories.${i}.label`)}
+                <div class="field"><span>Projets</span><p class="cat-count">${n}</p></div>
+              </div>
+              ${rowActions("categories", i, p.categories.length)}
+            </div>`;
+          }).join("")}
+          <button class="btn btn-sm" type="button" data-act="list-add" data-list="categories">+ Ajouter une catégorie</button>
+        </section>`;
+    },
+    texts() {
+      return TEXT_GROUPS.map(([title, items]) => `
+        <section class="panel">
+          <h2>${esc(title)}</h2>
+          <div class="field-grid">
+            ${items.map(([k, label]) => `<label class="field"><span>${esc(label)}</span><input data-p="texts.${k}" value="${esc(S.profile.texts[k] ?? "")}" placeholder="${esc(R.DEFAULT_TEXTS[k] || "")}"></label>`).join("")}
+          </div>
+        </section>`).join("");
+    }
+  };
 
   function renderPanel(name) {
     const g = current();
@@ -494,14 +778,27 @@
     if (g && el) el.outerHTML = panelHTML(name, g);
   }
 
-  function renderEditor() {
+  function renderEditor(keepScroll) {
     const ed = $("#editor");
+    const top = ed.scrollTop;
+    if (S.view !== "game") {
+      const page = SITE_PAGES.find((p) => p.key === S.view);
+      ed.innerHTML = `
+        <div class="ed-head">
+          <div class="ed-title">
+            <p class="eyebrow">Site</p>
+            <h1>${esc(page.label)}</h1>
+          </div>
+        </div>
+        <div class="site-forms">${SITE[S.view]()}</div>`;
+      if (keepScroll) ed.scrollTop = top;
+      return;
+    }
     const g = current();
     if (!g) {
       ed.innerHTML = `
         <div class="editor-empty">
           <h1>Aucun projet</h1>
-          <p class="muted">Ajoute ton premier jeu pour commencer.</p>
           <button class="btn btn-accent" type="button" data-act="add">+ Nouveau projet</button>
         </div>`;
       return;
@@ -512,7 +809,7 @@
         <div class="ed-title">
           <p class="eyebrow">Projet ${idx + 1} sur ${S.games.length}</p>
           <h1 id="ed-title">${esc(g.title || "Sans titre")}</h1>
-          <p class="muted small">Lien direct : <code id="ed-slug">#jeu-${esc(gameId(g))}</code></p>
+          <p class="muted small"><code id="ed-slug">#jeu-${esc(gameId(g))}</code></p>
         </div>
         <div class="ed-actions">
           <button class="btn btn-sm" type="button" data-act="preview-fiche">Voir la fiche</button>
@@ -521,7 +818,7 @@
         </div>
       </div>
       <div class="confirm" id="confirm-delete" hidden>
-        <p>Supprimer « ${esc(g.title || "Sans titre")} » ? Le projet disparaîtra du site à la prochaine publication.</p>
+        <p></p>
         <div class="confirm-actions">
           <button class="btn btn-sm btn-danger-solid" type="button" data-act="delete-yes">Oui, supprimer</button>
           <button class="btn btn-sm btn-ghost" type="button" data-act="delete-no">Annuler</button>
@@ -532,9 +829,9 @@
         <aside class="ed-side">
           <p class="eyebrow">Carte sur le site</p>
           <div class="card-preview" id="card-preview"></div>
-          <p class="hint">Clique la carte pour voir la fiche complète dans l'aperçu.</p>
         </aside>
       </div>`;
+    if (keepScroll) ed.scrollTop = top;
     renderCardPreview();
   }
 
@@ -544,12 +841,14 @@
     if (!g || !box) return;
     const saved = toSaved(g);
     if (!saved.title) saved.title = "Sans titre";
+    R.setTexts(S.profile.texts);
     box.innerHTML = R.cardHTML(R.normalizeGame(saved), catLabel);
     R.bindHover(box);
   }
 
   function renderAll() {
     R.setSrcMap(S.blobUrls);
+    R.setTexts(S.profile.texts);
     renderList();
     renderEditor();
     renderSaveState();
@@ -557,7 +856,16 @@
   }
 
   function select(uidv) {
+    S.view = "game";
     S.selected = uidv;
+    renderList();
+    renderEditor();
+    $("#editor").scrollTop = 0;
+    sendPreview(true);
+  }
+
+  function selectSite(key) {
+    S.view = key;
     renderList();
     renderEditor();
     $("#editor").scrollTop = 0;
@@ -578,20 +886,23 @@
   }
 
   function addFiles(files, target) {
-    const g = current();
-    if (!g) return;
-    const slug = slugify(gameId(g)) || "projet";
+    const isProfile = target.startsWith("p:");
+    const g = isProfile ? null : current();
+    if (!isProfile && !g) return;
+    const dir = isProfile ? "assets/profile" : `assets/games/${slugify(gameId(g)) || "projet"}`;
+    const allowPdf = target === "p:contact.cv";
     const added = [];
     files.forEach((file) => {
-      if (!/^(image|video|audio)\//.test(file.type)) {
-        toast(`« ${file.name} » n'est ni une image, ni une vidéo, ni un son.`, "error");
+      const ok = allowPdf ? file.type === "application/pdf" : /^(image|video|audio)\//.test(file.type);
+      if (!ok) {
+        toast(allowPdf ? `« ${file.name} » n'est pas un PDF.` : `« ${file.name} » n'est ni une image, ni une vidéo, ni un son.`, "error");
         return;
       }
       if (file.size > MAX_MB * 1024 * 1024) {
-        toast(`« ${file.name} » dépasse ${MAX_MB} Mo. Compresse-le, ou mets la vidéo sur YouTube et ajoute le lien.`, "error");
+        toast(`« ${file.name} » dépasse ${MAX_MB} Mo.`, "error");
         return;
       }
-      const path = `assets/games/${slug}/${safeName(file.name)}`;
+      const path = `${dir}/${safeName(file.name)}`;
       S.pending[path] = file;
       S.blobUrls[path] = URL.createObjectURL(file);
       added.push(path);
@@ -599,9 +910,14 @@
     if (!added.length) return;
     R.setSrcMap(S.blobUrls);
     S.filesVersion++;
+    if (isProfile) {
+      setPath(S.profile, target.slice(2), added[0]);
+      renderEditor(true);
+      changed();
+      return;
+    }
     if (target === "gallery") added.forEach((p) => { if (!g.gallery.includes(p)) g.gallery.push(p); });
     else g[target] = added[0];
-
     renderPanel("media");
     renderPanel("gallery");
     changed();
@@ -625,7 +941,7 @@
   function newGame() {
     const g = toEditable({
       title: "Nouveau projet",
-      category: CATS[0] ? CATS[0].id : "",
+      category: cats()[0] ? cats()[0].id : "",
       year: new Date().getFullYear(),
       color: COLORS[S.games.length % COLORS.length]
     });
@@ -643,6 +959,30 @@
     return true;
   }
 
+  function listAction(act, listPath, i) {
+    const arr = getPath(S.profile, listPath);
+    if (!Array.isArray(arr)) return;
+    if (act === "list-add") {
+      arr.push(LIST_TEMPLATES[listPath]());
+    } else if (act === "list-remove") {
+      if (listPath === "categories") {
+        const used = S.games.filter((g) => g.category === arr[i].id).length;
+        if (used) { toast(`Cette catégorie est utilisée par ${used} projet${used > 1 ? "s" : ""}. Change d'abord leur catégorie.`, "error"); return; }
+      }
+      arr.splice(i, 1);
+    } else if (!move(arr, i, act === "list-up" ? -1 : 1)) {
+      return;
+    }
+    renderEditor(true);
+    changed();
+    if (act === "list-add") {
+      const rows = $$(".row-card");
+      const last = rows[rows.length - 1];
+      const input = last && last.querySelector("input, select");
+      if (input) { input.focus(); last.scrollIntoView({ block: "nearest" }); }
+    }
+  }
+
   function onClick(e) {
     const btn = e.target.closest("[data-act]");
     const card = e.target.closest("#card-preview [data-open]");
@@ -653,6 +993,7 @@
     const i = Number(btn.dataset.i);
 
     switch (act) {
+      case "site": selectSite(btn.dataset.page); break;
       case "select": select(btn.dataset.uid); break;
       case "up":
       case "down": {
@@ -676,7 +1017,7 @@
         break;
       }
       case "delete":
-        $("#confirm-delete p").textContent = `Supprimer « ${g.title || "Sans titre"} » ? Le projet disparaîtra du site à la prochaine publication.`;
+        $("#confirm-delete p").textContent = `Supprimer « ${g.title || "Sans titre"} » ?`;
         $("#confirm-delete").hidden = false;
         $('[data-act="delete-yes"]').focus();
         break;
@@ -685,13 +1026,14 @@
         const k = S.games.indexOf(g);
         S.games.splice(k, 1);
         const next = S.games[Math.min(k, S.games.length - 1)];
-        select(next ? next._uid : null);
+        if (next) select(next._uid); else selectSite("profile");
         changed();
-        toast(`« ${g.title || "Sans titre"} » supprimé. Publie pour l'enlever du site.`);
+        toast(`« ${g.title || "Sans titre"} » supprimé.`);
         break;
       }
       case "preview-fiche": setPreviewMode("fiche", true); break;
       case "clear-media": g[btn.dataset.f] = ""; renderPanel("media"); changed(); break;
+      case "clear-p": setPath(S.profile, btn.dataset.p, ""); renderEditor(true); changed(); break;
       case "gal-up":
       case "gal-down":
         if (move(g.gallery, i, act === "gal-up" ? -1 : 1)) { renderPanel("gallery"); changed(); }
@@ -705,9 +1047,17 @@
         $$('#panel-links [data-k="url"]').pop().focus();
         break;
       case "link-remove": g.links.splice(i, 1); renderPanel("links"); changed(); break;
+      case "list-add":
+      case "list-remove":
+      case "list-up":
+      case "list-down":
+        listAction(act, btn.dataset.list, i);
+        break;
       case "discard-draft":
         clearDraft();
         S.games = JSON.parse(S.published).map(toEditable);
+        S.profile = toEditableProfile(JSON.parse(S.publishedProfile));
+        S.view = S.games[0] ? "game" : "profile";
         S.selected = S.games[0] ? S.games[0]._uid : null;
         setBanner("");
         renderAll();
@@ -718,6 +1068,15 @@
 
   function onInput(e) {
     const el = e.target;
+    if (el.dataset.p) {
+      let v = el.value;
+      if (el.dataset.kind === "paras") v = v.split(/\n\s*\n/);
+      else if (el.dataset.kind === "csv") v = v.split(",").map((x) => x.trim()).filter(Boolean);
+      setPath(S.profile, el.dataset.p, v);
+      if (el.dataset.p.startsWith("texts.")) R.setTexts(S.profile.texts);
+      changed();
+      return;
+    }
     const g = current();
     if (!g) return;
     if (el.dataset.f) {
@@ -743,7 +1102,7 @@
       el.value = "";
       return;
     }
-
+    if (el.dataset.p === "avatar" || el.dataset.p === "contact.cv") renderEditor(true);
     if (el.dataset.f === "cover" || el.dataset.f === "hoverPreview") renderPanel("media");
     if (el.dataset.gal != null) {
       const g = current();
@@ -800,7 +1159,9 @@
   async function publish() {
     if (S.mode !== "github" || !S.auth || S.busy || !validate()) return;
     const files = usedPendingPaths();
-    if (!isDirty() && !files.length) { toast("Rien à publier : tout est déjà en ligne."); return; }
+    const gd = gamesDirty();
+    const pd = profileDirty();
+    if (!gd && !pd && !files.length) { toast("Rien à publier : tout est déjà en ligne."); return; }
     S.busy = true;
     const btn = $("#publish-btn");
     btn.disabled = true;
@@ -808,16 +1169,24 @@
     try {
       for (let i = 0; i < files.length; i++) {
         const p = files[i];
-        renderSaveState(`Envoi des médias ${i + 1}/${files.length}…`);
+        renderSaveState(`Envoi des fichiers ${i + 1}/${files.length}…`);
         const existing = await getFile(p);
         const content = await fileToB64(S.pending[p]);
         await putFile(p, content, `Admin : ajoute ${p}`, existing && !Array.isArray(existing) ? existing.sha : undefined);
         delete S.pending[p];
       }
-      renderSaveState("Publication des projets…");
-      const cur = await getFile("data/games.js");
-      await putFile("data/games.js", utf8ToB64(gamesFileContent()), "Admin : met à jour les projets", cur && cur.sha);
-      S.published = snapshot();
+      if (gd) {
+        renderSaveState("Publication des projets…");
+        const cur = await getFile("data/games.js");
+        await putFile("data/games.js", utf8ToB64(gamesFileContent()), "Admin : met à jour les projets", cur && cur.sha);
+        S.published = snapshot();
+      }
+      if (pd) {
+        renderSaveState("Publication du profil…");
+        const cur = await getFile("data/profile.js");
+        await putFile("data/profile.js", utf8ToB64(profileFileContent()), "Admin : met à jour le profil et les textes", cur && cur.sha);
+        S.publishedProfile = profileSnapshot();
+      }
       clearDraft();
       setBanner("");
       toast("Publié. Ton site sera à jour d'ici une à deux minutes.", "ok");
@@ -827,29 +1196,32 @@
       S.busy = false;
       btn.textContent = "Publier";
       renderSaveState();
-      renderPanel("media");
-      renderPanel("gallery");
+      renderEditor(true);
     }
   }
 
-  function exportFile() {
-    if (!validate()) return;
-    const blob = new Blob([gamesFileContent()], { type: "text/javascript;charset=utf-8" });
+  function download(name, content) {
+    const blob = new Blob([content], { type: "text/javascript;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "games.js";
+    a.download = name;
     document.body.append(a);
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
 
-    toast("games.js téléchargé.", "ok");
+  function exportFile() {
+    if (!validate()) return;
+    download("games.js", gamesFileContent());
+    download("profile.js", profileFileContent());
+    toast("games.js et profile.js téléchargés.", "ok");
   }
 
   const frame = $("#preview-frame");
 
   function sendPreview(scroll) {
-    if (!S.frameReady || !frame.contentWindow) return;
+    if (!S.frameReady || !frame.contentWindow || !S.profile) return;
     const cur = current();
     const fiche = S.previewMode === "fiche" && cur;
     const games = S.games.map((g) => {
@@ -858,7 +1230,9 @@
       if (fiche && g === cur) delete s.hidden;
       return s;
     });
-    const msg = { type: "pf-preview", games, style: S.previewStyle, open: fiche ? gameId(cur) : null, scroll: !!scroll };
+    const page = SITE_PAGES.find((p) => p.key === S.view);
+    const scrollTo = scroll ? (page ? page.section : "projets") : null;
+    const msg = { type: "pf-preview", games, profile: profileSaved(), open: fiche ? gameId(cur) : null, scrollTo };
     if (S.sentFilesVersion !== S.filesVersion) {
       msg.files = { ...S.pending };
       S.sentFilesVersion = S.filesVersion;
@@ -888,12 +1262,6 @@
       }
     });
     $$("[data-pmode]").forEach((b) => b.addEventListener("click", () => setPreviewMode(b.dataset.pmode, false)));
-    $$("[data-pstyle]").forEach((b) => b.addEventListener("click", () => {
-      S.previewStyle = b.dataset.pstyle;
-      $$("[data-pstyle]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-      sendPreview(false);
-    }));
-    $$("[data-pstyle]").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.pstyle === S.previewStyle)));
     $("#preview-toggle").addEventListener("click", () => { S.previewOpen = !S.previewOpen; applyPreviewOpen(); });
     $("#preview-close").addEventListener("click", () => { S.previewOpen = false; applyPreviewOpen(); });
   }

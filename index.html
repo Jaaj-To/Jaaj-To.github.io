@@ -1,13 +1,13 @@
 <!doctype html>
-<html lang="fr" data-style="dark">
+<html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Portfolio</title>
-  <meta name="description" content="Portfolio de jeux vidéo">
+  <meta name="description" content="Portfolio">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;600&family=Caveat:wght@600;700&family=Patrick+Hand&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;600&display=swap">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -16,17 +16,16 @@
     <div class="wrap nav-inner">
       <a class="logo" href="#accueil" id="logo"></a>
       <nav class="nav-links" id="nav-links" aria-label="Navigation principale">
-        <a href="#accueil">Accueil</a>
-        <a href="#projets">Projets</a>
-        <a href="#apropos">À propos</a>
-        <a href="#parcours">Parcours</a>
-        <a href="#contact">Contact</a>
+        <a href="#accueil" data-t="navHome"></a>
+        <a href="#projets" data-t="navProjects"></a>
+        <a href="#apropos" data-t="navAbout"></a>
+        <a href="#parcours" data-t="navJourney"></a>
+        <a href="#contact" data-t="navContact"></a>
       </nav>
       <div class="nav-actions">
-        <a class="admin-link" id="admin-link" href="admin.html">Admin</a>
-        <button class="style-toggle" id="style-toggle" type="button" aria-label="Changer de style"></button>
-        <a class="btn btn-accent btn-sm nav-cta" href="#contact">Me contacter</a>
-        <button class="menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Ouvrir le menu">
+        <a class="admin-link" id="admin-link" href="admin.html" data-t="navAdmin"></a>
+        <a class="btn btn-accent btn-sm nav-cta" href="#contact" data-t="navCta"></a>
+        <button class="menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Menu">
           <span></span><span></span>
         </button>
       </div>
@@ -41,15 +40,15 @@
     <section class="section" id="projets">
       <div class="wrap">
         <div class="section-head">
-          <p class="eyebrow" id="projects-eyebrow">// Projets</p>
-          <h2 class="section-title">Mes jeux</h2>
+          <p class="eyebrow" id="projects-eyebrow"></p>
+          <h2 class="section-title" data-t="projectsTitle"></h2>
         </div>
         <div id="spotlight"></div>
         <div class="filters" id="filters"></div>
         <div class="grid" id="grid"></div>
         <p class="empty" id="empty" hidden>
-          Aucun projet ne correspond à ces filtres.
-          <button class="link-btn" type="button" id="reset-filters">Réinitialiser les filtres</button>
+          <span data-t="emptyFilters"></span>
+          <button class="link-btn" type="button" id="reset-filters" data-t="resetFilters"></button>
         </p>
       </div>
     </section>
@@ -61,8 +60,8 @@
     <section class="section" id="parcours">
       <div class="wrap">
         <div class="section-head">
-          <p class="eyebrow">// Parcours</p>
-          <h2 class="section-title">Formation &amp; expérience</h2>
+          <p class="eyebrow" data-t="journeyEyebrow" data-prefix="// "></p>
+          <h2 class="section-title" data-t="journeyTitle"></h2>
         </div>
         <ol class="timeline" id="timeline"></ol>
       </div>

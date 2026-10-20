@@ -6,6 +6,56 @@ window.PFRender = (function () {
     playstore: "Google Play", appstore: "App Store", download: "Télécharger", video: "Vidéo"
   };
 
+  const DEFAULT_TEXTS = {
+    navHome: "Accueil",
+    navProjects: "Projets",
+    navAbout: "À propos",
+    navJourney: "Parcours",
+    navContact: "Contact",
+    navCta: "Me contacter",
+    navAdmin: "Admin",
+    heroProjects: "Voir mes projets",
+    heroCv: "Mon CV ↗",
+    heroAbout: "À propos",
+    projectsEyebrow: "projets",
+    projectsTitle: "Mes jeux",
+    filterType: "Type",
+    filterTech: "Techno",
+    filterAll: "Tous",
+    filterAllTech: "Toutes",
+    emptyFilters: "Aucun projet ne correspond à ces filtres.",
+    resetFilters: "Réinitialiser les filtres",
+    badgeFeatured: "À la une",
+    cardMore: "Voir la fiche",
+    ficheMenu: "Tous les projets",
+    ficheContribution: "Ma contribution",
+    ficheTech: "Technos",
+    factYear: "Année",
+    factType: "Type",
+    factJam: "Jam",
+    factDuration: "Durée",
+    factTeam: "Équipe",
+    factRole: "Rôle",
+    factEngine: "Moteur",
+    aboutEyebrow: "À propos",
+    aboutTitle: "Qui suis-je ?",
+    skillsTitle: "Compétences",
+    journeyEyebrow: "Parcours",
+    journeyTitle: "Formation & expérience",
+    journeyEdu: "Formation",
+    journeyWork: "Expérience",
+    contactEyebrow: "Contact",
+    contactTitle: "On travaille ensemble ?",
+    contactCopy: "Copier",
+    contactCopied: "Copié",
+    contactCv: "Télécharger mon CV",
+    footerText: ""
+  };
+
+  let texts = { ...DEFAULT_TEXTS };
+  const setTexts = (t) => { texts = { ...DEFAULT_TEXTS, ...(t || {}) }; };
+  const T = (k) => (texts[k] ?? "");
+
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const slugify = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
@@ -50,7 +100,6 @@ window.PFRender = (function () {
   function placeholder(g) {
     return `<div class="ph" style="--ph:${esc(g.color || "#4a4540")}"><span>${esc(g.title)}</span></div>`;
   }
-
   function fail(img) {
     img.outerHTML = placeholder({ title: img.dataset.title, color: img.dataset.color });
   }
@@ -78,7 +127,7 @@ window.PFRender = (function () {
 
   function badgesHTML(g) {
     const b = [];
-    if (g.featured) b.push(`<span class="badge badge-star">★ À la une</span>`);
+    if (g.featured && T("badgeFeatured")) b.push(`<span class="badge badge-star">★ ${esc(T("badgeFeatured"))}</span>`);
     if (g.jam) b.push(`<span class="badge badge-jam">⚑ ${esc(g.jam)}</span>`);
     return b.length ? `<div class="badges">${b.join("")}</div>` : "";
   }
@@ -98,7 +147,7 @@ window.PFRender = (function () {
           <h3>${esc(g.title)}</h3>
           ${g.tagline ? `<p class="tagline">${esc(g.tagline)}</p>` : ""}
           ${tagsHTML(g.tech, 4)}
-          <span class="more">Voir la fiche <span class="arrow">→</span></span>
+          <span class="more">${esc(T("cardMore"))} <span class="arrow">→</span></span>
         </div>
       </a>`;
   }
@@ -113,38 +162,73 @@ window.PFRender = (function () {
           ${g.tagline ? `<p class="tagline">${esc(g.tagline)}</p>` : ""}
           ${g.highlights.length ? `<ul>${g.highlights.slice(0, 3).map((h) => `<li>${esc(h)}</li>`).join("")}</ul>` : ""}
           ${tagsHTML(g.tech)}
-          <span class="btn btn-accent btn-sm" style="justify-self:start">Voir la fiche →</span>
+          <span class="btn btn-accent btn-sm" style="justify-self:start">${esc(T("cardMore"))} →</span>
         </div>
       </a>`;
   }
 
   function stageHTML(g, m) {
     if (!m) return placeholder(g);
-    if (m.type === "yt") return `<iframe src="https://www.youtube-nocookie.com/embed/${m.id}" title="${esc(g.title)} — vidéo" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    if (m.type === "yt") return `<iframe src="https://www.youtube-nocookie.com/embed/${m.id}" title="${esc(g.title)}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
     if (m.type === "video") return `<video src="${esc(src(m.src))}" controls playsinline preload="metadata"></video>`;
     if (m.type === "audio") return `${g.cover ? imgTag(g.cover, g) : placeholder(g)}<audio src="${esc(src(m.src))}" controls preload="metadata"></audio>`;
     return imgTag(m.src, g);
   }
 
-  function ficheHTML(g, catLabel) {
+  function menuThumb(g) {
+    if (g.cover && mediaType(g.cover) === "img") {
+      return `<img src="${esc(src(g.cover))}" alt="" loading="lazy" onerror="this.remove()"><span class="fm-initial" style="--ph:${esc(g.color || "#4a4540")}">${esc(g.title.charAt(0))}</span>`;
+    }
+    return `<span class="fm-initial" style="--ph:${esc(g.color || "#4a4540")}">${esc(g.title.charAt(0))}</span>`;
+  }
+
+  function ficheMenuHTML(g, all) {
+    return `
+      <div class="fiche-menu-wrap">
+        <button class="fiche-menu-btn" type="button" aria-expanded="false" aria-controls="fiche-menu" aria-label="${esc(T("ficheMenu"))}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+        </button>
+        <nav class="fiche-menu" id="fiche-menu" hidden aria-label="${esc(T("ficheMenu"))}">
+          <p class="fm-title">${esc(T("ficheMenu"))}</p>
+          <ul>
+            ${all.map((x) => `
+              <li>
+                <button class="fm-item" type="button" data-goto="${esc(x.id)}" ${x.id === g.id ? 'aria-current="true"' : ""}>
+                  <span class="fm-thumb">${menuThumb(x)}</span>
+                  <span class="fm-text">
+                    <strong>${esc(x.title)}</strong>
+                    ${x.tagline ? `<small>${esc(x.tagline)}</small>` : ""}
+                    ${x.tech.length ? tagsHTML(x.tech, 3) : ""}
+                  </span>
+                </button>
+              </li>`).join("")}
+          </ul>
+        </nav>
+      </div>`;
+  }
+
+  function ficheHTML(g, catLabel, all = []) {
     const items = mediaItems(g);
     const facts = [
-      ["Année", g.year], ["Type", catLabel(g.category)], ["Jam", g.jam], ["Durée", g.duration],
-      ["Équipe", g.team], ["Rôle", g.role], ["Moteur", g.engine]
+      ["factYear", g.year], ["factType", catLabel(g.category)], ["factJam", g.jam], ["factDuration", g.duration],
+      ["factTeam", g.team], ["factRole", g.role], ["factEngine", g.engine]
     ].filter(([, v]) => v);
     const paragraphs = String(g.description || "").split(/\n\s*\n/).filter((p) => p.trim());
     const thumbIcon = { yt: "▶", video: "▶", audio: "♪" };
 
     return `
-      <button class="modal-close" type="button" aria-label="Fermer la fiche">✕</button>
+      <div class="modal-bar">
+        ${all.length > 1 ? ficheMenuHTML(g, all) : "<span></span>"}
+        <button class="modal-close" type="button" aria-label="Fermer">✕</button>
+      </div>
       <div class="viewer">
         <div class="viewer-stage">
           <div class="stage-media" id="stage-media"></div>
-          ${items.length > 1 ? `<button class="viewer-nav prev" type="button" aria-label="Média précédent">←</button>
-          <button class="viewer-nav next" type="button" aria-label="Média suivant">→</button>` : ""}
+          ${items.length > 1 ? `<button class="viewer-nav prev" type="button" aria-label="←">←</button>
+          <button class="viewer-nav next" type="button" aria-label="→">→</button>` : ""}
         </div>
         ${items.length > 1 ? `<div class="thumbs">${items.map((m, j) => `
-          <button class="thumb" type="button" data-i="${j}" aria-label="Média ${j + 1}">
+          <button class="thumb" type="button" data-i="${j}" aria-label="${j + 1}">
             ${m.thumb ? `<img src="${esc(src(m.thumb))}" alt="" loading="lazy" onerror="this.remove()">` : ""}
             ${thumbIcon[m.type] ? `<span class="play">${thumbIcon[m.type]}</span>` : ""}
           </button>`).join("")}</div>` : ""}
@@ -155,18 +239,18 @@ window.PFRender = (function () {
           <h2 id="modal-title">${esc(g.title)}</h2>
           ${g.tagline ? `<p class="tagline">${esc(g.tagline)}</p>` : ""}
           ${paragraphs.length ? `<div class="prose">${paragraphs.map((p) => `<p>${esc(p)}</p>`).join("")}</div>` : ""}
-          ${g.highlights.length ? `<h3>Ma contribution</h3><ul class="highlights">${g.highlights.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>` : ""}
+          ${g.highlights.length ? `${T("ficheContribution") ? `<h3>${esc(T("ficheContribution"))}</h3>` : ""}<ul class="highlights">${g.highlights.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>` : ""}
         </div>
         <aside class="modal-aside">
-          ${facts.length ? `<dl class="facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>` : ""}
-          ${g.tech.length ? `<div class="skill-group"><p class="eyebrow">Technos</p>${tagsHTML(g.tech)}</div>` : ""}
+          ${facts.length ? `<dl class="facts">${facts.map(([k, v]) => `<div><dt>${esc(T(k))}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>` : ""}
+          ${g.tech.length ? `<div class="skill-group">${T("ficheTech") ? `<p class="eyebrow">${esc(T("ficheTech"))}</p>` : ""}${tagsHTML(g.tech)}</div>` : ""}
           ${g.links.length ? `<div class="modal-links">${g.links.map((l, j) => `<a class="btn ${j === 0 ? "btn-accent" : ""}" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)} <span>↗</span></a>`).join("")}</div>` : ""}
         </aside>
       </div>`;
   }
 
   return {
-    LINK_LABELS, esc, slugify, src, setSrcMap,
+    LINK_LABELS, DEFAULT_TEXTS, setTexts, T, esc, slugify, src, setSrcMap,
     normalizeLinks, normalizeGame, normalizeAll,
     ytId, mediaType, mediaItems, placeholder, fail, coverHTML,
     tagsHTML, cardHTML, spotlightHTML, stageHTML, ficheHTML, bindHover
