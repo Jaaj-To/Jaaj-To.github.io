@@ -1,10 +1,10 @@
 window.PROFILE = {
-  "name": "Prénom Nom",
-  "logo": "PRÉNOM // NOM",
+  "name": "Léo Bendre",
+  "logo": "Léo Bendre // Jaajto",
   "role": "Game Designer & Gameplay Programmer",
   "status": "Recherche un stage — été 2027",
   "location": "Paris, France",
-  "intro": "Étudiant·e en game design et programmation. J'aime construire des contrôles qui répondent bien et des systèmes qui donnent envie de rejouer.",
+  "intro": "Étudiant en game design et programmation. J'aime construire des contrôles qui répondent bien et des systèmes qui donnent envie de rejouer.",
   "avatar": "",
   "about": [
     "Je suis en 3e année de Game Design & Programming. Je travaille surtout sur Unity et Godot, en C#, et je touche à Blender quand une équipe a besoin d'un coup de main sur les assets.",
@@ -56,22 +56,29 @@ window.PROFILE = {
     },
     {
       "type": "edu",
-      "date": "2023 – 2028",
+      "date": "2025 – 2030",
       "title": "Game Design & Programming",
       "place": "Nom de l'école",
       "text": ""
     },
     {
       "type": "edu",
-      "date": "2023",
-      "title": "Baccalauréat",
-      "place": "Lycée",
-      "text": ""
+      "date": "2024 - 2025",
+      "title": "CPGE TSI",
+      "place": "Lycée de Cachan",
+      "text": "Classes Préparatoires aux Grandes Ecoles d'Ingénieur"
+    },
+    {
+      "type": "edu",
+      "date": "2024",
+      "title": "Bac STI2D",
+      "place": "Lycée de Diderot",
+      "text": "Baccalauréat Technologique, \nSciences et Technologies de l'Industrie et du Développement Durable"
     }
   ],
   "contact": {
     "pitch": "Ouvert aux stages et aux game jams. Écris-moi, je réponds vite.",
-    "email": "ton.email@exemple.com",
+    "email": "leo.bendre@proton.me",
     "cv": "",
     "links": [
       {
