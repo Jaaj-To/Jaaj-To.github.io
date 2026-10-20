@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="fr" data-style="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>Admin du portfolio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;600&family=Caveat:wght@600;700&family=Patrick+Hand&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="admin">
+
+  <!-- ===== Connexion ===== -->
+  <section class="login" id="login" hidden>
+    <form class="login-card" id="login-form" autocomplete="on">
+      <a class="back-link" href="index.html">← Retour au site</a>
+      <div class="login-head">
+        <p class="eyebrow">// Admin</p>
+        <h1>Connexion</h1>
+        <p class="muted">Connecte-toi avec un token GitHub pour modifier tes projets et les publier directement sur ton site.</p>
+      </div>
+
+      <div class="field-grid three">
+        <label class="field"><span>Compte GitHub</span><input id="gh-owner" name="owner" required autocomplete="username" spellcheck="false"></label>
+        <label class="field"><span>Dépôt</span><input id="gh-repo" name="repo" required spellcheck="false"></label>
+        <label class="field"><span>Branche</span><input id="gh-branch" name="branch" required spellcheck="false"></label>
+      </div>
+      <label class="field"><span>Token GitHub</span><input id="gh-token" name="token" type="password" required autocomplete="current-password" spellcheck="false" placeholder="github_pat_…"></label>
+      <label class="check"><input type="checkbox" id="remember"> Rester connecté sur cet appareil</label>
+
+      <p class="form-error" id="login-error" role="alert" hidden></p>
+      <button class="btn btn-accent btn-block" type="submit" id="login-btn">Se connecter</button>
+      <button class="link-btn" type="button" id="local-btn">Continuer en mode local, sans publier</button>
+
+      <details class="help">
+        <summary>Comment créer mon token ?</summary>
+        <ol>
+          <li>Sur GitHub : <strong>Settings → Developer settings → Personal access tokens → Fine-grained tokens</strong>, puis <strong>Generate new token</strong>.</li>
+          <li><strong>Repository access</strong> : « Only select repositories » et choisis le dépôt de ton site.</li>
+          <li><strong>Permissions → Repository permissions → Contents</strong> : « Read and write ».</li>
+          <li>Génère le token, copie-le et colle-le ici. GitHub ne le réaffiche plus ensuite.</li>
+        </ol>
+        <p class="muted">Le token reste dans ton navigateur et n'est envoyé qu'à api.github.com. Sans lui, personne ne peut modifier ton site, même en ouvrant cette page.</p>
+      </details>
+    </form>
+  </section>
+
+  <!-- ===== Éditeur ===== -->
+  <section class="app" id="app" hidden>
+    <header class="topbar">
+      <div class="topbar-left">
+        <a class="logo" href="index.html" target="_blank" rel="noopener" id="admin-logo">Admin</a>
+        <span class="mode-pill" id="mode-pill"></span>
+      </div>
+      <div class="topbar-actions">
+        <span class="save-state" id="save-state" aria-live="polite"></span>
+        <button class="btn btn-sm btn-ghost preview-toggle" type="button" id="preview-toggle" aria-pressed="false">Aperçu</button>
+        <button class="btn btn-sm" type="button" id="export-btn">Exporter games.js</button>
+        <button class="btn btn-sm btn-accent" type="button" id="publish-btn">Publier</button>
+        <button class="btn btn-sm btn-ghost" type="button" id="logout-btn">Déconnexion</button>
+      </div>
+    </header>
+
+    <div class="banner" id="banner" hidden></div>
+
+    <div class="workspace" id="workspace">
+      <aside class="sidebar">
+        <div class="sidebar-head">
+          <p class="eyebrow" id="list-count">Projets</p>
+          <button class="btn btn-sm btn-accent" type="button" id="add-btn">+ Nouveau</button>
+        </div>
+        <ul class="project-list" id="project-list"></ul>
+      </aside>
+
+      <main class="editor" id="editor"></main>
+
+      <section class="preview-pane" id="preview-pane" aria-label="Aperçu en direct">
+        <div class="preview-head">
+          <div class="seg" role="group" aria-label="Que montrer">
+            <button type="button" data-pmode="fiche" aria-pressed="true">Fiche</button>
+            <button type="button" data-pmode="list" aria-pressed="false">Liste</button>
+          </div>
+          <div class="seg" role="group" aria-label="Style de l'aperçu">
+            <button type="button" data-pstyle="dark" aria-pressed="true">Sombre</button>
+            <button type="button" data-pstyle="sketch" aria-pressed="false">Carnet</button>
+          </div>
+          <button class="icon-btn preview-close" type="button" id="preview-close" aria-label="Fermer l'aperçu">✕</button>
+        </div>
+        <div class="preview-frame-wrap">
+          <iframe id="preview-frame" title="Aperçu du site" src="index.html"></iframe>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <datalist id="link-labels">
+    <option value="itch.io"></option>
+    <option value="GitHub"></option>
+    <option value="Steam"></option>
+    <option value="Jouer en ligne"></option>
+    <option value="Google Play"></option>
+    <option value="App Store"></option>
+    <option value="Télécharger"></option>
+    <option value="Trailer"></option>
+  </datalist>
+  <datalist id="tech-list"></datalist>
+
+  <script src="data/profile.js"></script>
+  <script src="data/games.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
